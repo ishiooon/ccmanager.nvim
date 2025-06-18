@@ -1,0 +1,13 @@
+# Neovim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project
+/tags
+/.luarc.json

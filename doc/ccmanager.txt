@@ -1,0 +1,68 @@
+*ccmanager.txt*  Neovim plugin for CCManager
+
+==============================================================================
+CONTENTS                                                    *ccmanager-contents*
+
+1. Introduction ............................................. |ccmanager-intro|
+2. Setup .................................................... |ccmanager-setup|
+3. Configuration ........................................ |ccmanager-config|
+4. Commands ............................................. |ccmanager-commands|
+5. Mappings ............................................. |ccmanager-mappings|
+
+==============================================================================
+INTRODUCTION                                                   *ccmanager-intro*
+
+CCManager.nvim is a Neovim plugin that integrates CCManager (Claude Code Session
+Manager) into your editor using toggleterm.nvim. CCManager is a TUI application
+for managing multiple Claude Code sessions across Git worktrees. This plugin
+allows you to easily access CCManager from within Neovim.
+
+==============================================================================
+SETUP                                                          *ccmanager-setup*
+
+To use CCManager.nvim, you need to have toggleterm.nvim installed.
+
+Using lazy.nvim: >lua
+  {
+    "your-username/ccmanager.nvim",
+    dependencies = { "akinsho/toggleterm.nvim" },
+    config = function()
+      require("ccmanager").setup()
+    end,
+  }
+<
+
+==============================================================================
+CONFIGURATION                                                 *ccmanager-config*
+
+Call the setup function with your configuration: >lua
+  require("ccmanager").setup({
+    keymap = "<leader>cm",           -- Default keymap to toggle CCManager
+    window = {
+      size = 0.3,                    -- Window size (0-1 for percentage)
+      position = "right",            -- Window position: "right", "left", "bottom", "top"
+    },
+    command = "npx ccmanager",       -- Command to run CCManager
+  })
+<
+
+==============================================================================
+COMMANDS                                                    *ccmanager-commands*
+
+Currently, CCManager.nvim does not provide any commands. Use the keymap to
+toggle the CCManager terminal.
+
+==============================================================================
+MAPPINGS                                                    *ccmanager-mappings*
+
+*<leader>cm*
+    Toggle CCManager terminal window (default mapping)
+
+In terminal mode:
+*<Esc>*
+    Exit terminal mode to normal mode
+*<C-w>*
+    Window navigation from terminal mode
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
