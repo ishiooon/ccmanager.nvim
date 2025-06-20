@@ -17,12 +17,12 @@ function M.toggle()
     terminal = Terminal:new({
       cmd = M.config.command,
       dir = vim.fn.getcwd(),
-      direction = M.config.window.position == "right" and "vertical" or M.config.window.position,
+      direction = (M.config.window.position == "right" or M.config.window.position == "left") and "vertical" or M.config.window.position,
       size = function()
-        if M.config.window.position == "vertical" or M.config.window.position == "right" then
-          return vim.o.columns * M.config.window.size
+        if M.config.window.position == "right" or M.config.window.position == "left" then
+          return math.floor(vim.o.columns * M.config.window.size)
         else
-          return vim.o.lines * M.config.window.size
+          return math.floor(vim.o.lines * M.config.window.size)
         end
       end,
       close_on_exit = true,
