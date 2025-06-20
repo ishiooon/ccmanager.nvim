@@ -1,5 +1,8 @@
 # ccmanager.nvim
 
+※This project is under construction.
+※このプロジェクトは作成中です。
+
 Neovim plugin for [CCManager](https://github.com/kbwo/ccmanager) - Claude Code Session Manager integration using toggleterm.nvim.
 
 CCManager is a TUI application for managing multiple Claude Code sessions across Git worktrees. This plugin allows you to run CCManager directly within Neovim.
