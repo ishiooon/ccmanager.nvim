@@ -1,5 +1,4 @@
-*ccmanager.txt*  Neovim plugin for CCManager
-*ccmanager.txt*  CCManager用Neovimプラグイン
+*ccmanager.txt*  Neovim plugin for CCManager / CCManager用Neovimプラグイン
 
 ==============================================================================
 CONTENTS                                                    *ccmanager-contents*
