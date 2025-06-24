@@ -1,5 +1,3 @@
-local helper = require("spec.spec_helper")
-
 describe("ccmanager", function()
   local ccmanager
   

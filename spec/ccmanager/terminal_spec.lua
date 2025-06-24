@@ -1,4 +1,18 @@
-local helper = require("spec.spec_helper")
+-- モック関数を作成
+local function create_mock()
+  return {
+    calls = {},
+    call = function(self, ...)
+      table.insert(self.calls, {...})
+    end,
+    call_count = function(self)
+      return #self.calls
+    end,
+    reset = function(self)
+      self.calls = {}
+    end,
+  }
+end
 
 describe("ccmanager.terminal", function()
   local terminal
@@ -13,7 +27,7 @@ describe("ccmanager.terminal", function()
     
     -- toggletermのモックを作成
     mock_terminal_instance = {
-      toggle = helper.create_mock(),
+      toggle = create_mock(),
       bufnr = 1234,
     }
     
@@ -59,7 +73,7 @@ describe("ccmanager.terminal", function()
     
     before_each(function()
       original_notify = vim.notify
-      vim.notify = helper.create_mock()
+      vim.notify = create_mock()
       
       terminal.setup({
         command = "test command",

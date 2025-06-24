@@ -29,4 +29,4 @@ jobs:
     
     - name: Run tests
       run: |
-        nvim --headless -c "PlenaryBustedDirectory spec/ { minimal_init = 'spec/spec_helper.lua' }"
+        nvim --headless --noplugin -u spec/minimal_init.lua -c "PlenaryBustedDirectory spec/ {minimal_init = 'spec/minimal_init.lua', sequential = true}" -c "quit!"
