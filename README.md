@@ -61,11 +61,47 @@ Press `<leader>cm` (default) to toggle the CCManager terminal window.
 - `<Esc>` - Exit terminal mode to normal mode / ターミナルモードからノーマルモードへ
 - `<C-w>` - Window navigation from terminal mode / ターミナルモードからのウィンドウ操作
 
+## Testing / テスト
+
+This plugin uses [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) for testing.
+
+このプラグインは[plenary.nvim](https://github.com/nvim-lua/plenary.nvim)を使用してテストを実行します。
+
+### Running tests locally / ローカルでのテスト実行
+
+1. Install plenary.nvim / plenary.nvimをインストール:
+   ```bash
+   git clone --depth 1 https://github.com/nvim-lua/plenary.nvim ~/.local/share/nvim/site/pack/vendor/start/plenary.nvim
+   ```
+
+2. Run all tests / 全てのテストを実行:
+   ```bash
+   nvim --headless -c "PlenaryBustedDirectory spec/ { minimal_init = 'spec/spec_helper.lua' }"
+   ```
+
+3. Run specific test file / 特定のテストファイルを実行:
+   ```bash
+   nvim --headless -c "PlenaryBustedFile spec/ccmanager/init_spec.lua"
+   ```
+
+### CI/CD
+
+Tests are automatically run on GitHub Actions for:
+- Push to `main` and `develop` branches
+- Pull requests to `main` branch
+- Both stable and nightly versions of Neovim
+
+GitHubActionsで以下の条件で自動的にテストが実行されます：
+- `main`と`develop`ブランチへのプッシュ
+- `main`ブランチへのプルリクエスト
+- Neovimのstableとnightlyバージョンでテスト
+
 ## Credits
 
 - [kbwo/ccmanager](https://github.com/kbwo/ccmanager) - The amazing CCManager TUI application
 - [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim) - Terminal management plugin for Neovim
 - [folke/lazy.nvim](https://github.com/folke/lazy.nvim) - Modern plugin manager for Neovim
+- [nvim-lua/plenary.nvim](https://github.com/nvim-lua/plenary.nvim) - Useful lua functions used in lots of plugins
 
 ## Author
 
