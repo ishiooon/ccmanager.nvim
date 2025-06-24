@@ -18,10 +18,13 @@ function M.toggle()
       cmd = M.config.command,
       dir = vim.fn.getcwd(),
       direction = (M.config.window.position == "right" or M.config.window.position == "left") and "vertical" or M.config.window.position,
-      size = function()
-        if M.config.window.position == "right" or M.config.window.position == "left" then
-          return math.floor(vim.o.columns * M.config.window.size)
+      size = function(term)
+        if term.direction == "vertical" then
+          -- 垂直分割: 列数として計算し、最小幅を確保
+          local calculated_size = math.floor(vim.o.columns * M.config.window.size)
+          return math.max(calculated_size, 20)
         else
+          -- 水平分割: 行数として計算
           return math.floor(vim.o.lines * M.config.window.size)
         end
       end,
