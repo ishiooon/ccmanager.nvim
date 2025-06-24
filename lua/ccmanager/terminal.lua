@@ -22,15 +22,23 @@ function M.toggle()
         if term.direction == "vertical" then
           -- 垂直分割: 列数として計算し、最小幅を確保
           local calculated_size = math.floor(vim.o.columns * M.config.window.size)
-          return math.max(calculated_size, 20)
+          -- デバッグ情報を追加（本番環境では削除）
+          -- vim.notify(string.format("CCManager: Calculated width: %d (columns: %d, size: %.2f)", calculated_size, vim.o.columns, M.config.window.size))
+          return math.max(calculated_size, 30)  -- 最小幅を30に増加
         else
           -- 水平分割: 行数として計算
           return math.floor(vim.o.lines * M.config.window.size)
         end
       end,
+      persist_size = false,  -- サイズの再計算を許可
       close_on_exit = true,
       hidden = false,
       on_open = function(term)
+        -- 垂直分割の場合、ウィンドウサイズを明示的に設定
+        if term.direction == "vertical" then
+          local expected_width = math.max(math.floor(vim.o.columns * M.config.window.size), 30)
+          vim.api.nvim_win_set_width(0, expected_width)
+        end
         vim.cmd("startinsert!")
         vim.keymap.set("t", "<Esc>", [[<C-\><C-n>]], { buffer = term.bufnr })
         vim.keymap.set("t", "<C-w>", [[<C-\><C-n><C-w>]], { buffer = term.bufnr })
