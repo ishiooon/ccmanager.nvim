@@ -1,5 +1,5 @@
 if vim.fn.has("nvim-0.11.0") == 0 then
-  vim.api.nvim_err_writeln("CCManager requires at least nvim-0.11.0")
+  vim.api.nvim_err_writeln("CCManager requires at least nvim-0.10.0")
   return
 end
 
