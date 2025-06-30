@@ -1,0 +1,74 @@
+# GitHub Actionsの設定ファイル
+# このファイルは、GitHubにコードをプッシュした時に自動的にテストを実行するための設定です
+
+# ワークフローの名前（GitHub上で表示される名前）
+name: Tests
+
+# このワークフローがいつ実行されるかを定義
+on:
+  # プッシュされた時に実行
+  push:
+    branches: [ main, develop ]  # mainブランチとdevelopブランチへのプッシュ時
+  # プルリクエストが作成・更新された時に実行
+  pull_request:
+    branches: [ main ]  # mainブランチへのプルリクエスト時
+
+# 実行されるジョブ（作業）の定義
+jobs:
+  # テストジョブ
+  test:
+    # どのOS上で実行するかを指定（ubuntu-latestは最新のUbuntu Linux）
+    runs-on: ubuntu-latest
+    
+    # 複数のNeovimバージョンでテストするための設定
+    strategy:
+      matrix:
+        neovim_version: ['stable', 'nightly']  # 安定版と開発版でテスト
+    
+    # ジョブの名前（マトリックスの値を含む）
+    name: Run tests (Neovim ${{ matrix.neovim_version }})
+    
+    # 実行するステップ（手順）
+    steps:
+      # 1. リポジトリのコードをチェックアウト（取得）
+      - uses: actions/checkout@v4
+        with:
+          # サブモジュールも一緒に取得する設定
+          submodules: recursive
+      
+      # 2. Neovimをインストール
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true  # Neovimを使用
+          version: ${{ matrix.neovim_version }}  # マトリックスで指定したバージョン
+      
+      # 3. plenary.nvim（テストフレームワーク）をインストール
+      - name: Install plenary.nvim
+        run: |
+          # プラグインを保存するディレクトリを作成
+          mkdir -p ~/.local/share/nvim/site/pack/vendor/start
+          # plenary.nvimをGitHubからクローン
+          git clone --depth 1 https://github.com/nvim-lua/plenary.nvim ~/.local/share/nvim/site/pack/vendor/start/plenary.nvim
+      
+      # 4. toggleterm.nvim（依存プラグイン）をインストール
+      - name: Install toggleterm.nvim
+        run: |
+          # toggleterm.nvimをGitHubからクローン
+          git clone --depth 1 https://github.com/akinsho/toggleterm.nvim ~/.local/share/nvim/site/pack/vendor/start/toggleterm.nvim
+      
+      # 5. テストを実行
+      - name: Run tests
+        run: |
+          # Neovimをヘッドレスモード（GUI無し）で起動してテストを実行
+          nvim --headless -c "PlenaryBustedDirectory tests/ {minimal_init = 'tests/minimal_init.lua'}" -c "qa!"
+      
+      # 6. テスト結果をアップロード（失敗時のデバッグ用）
+      - name: Upload test results
+        if: failure()  # テストが失敗した時のみ実行
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.neovim_version }}
+          path: |
+            # エラーログなどがあればここに追加
+            tests/**/*.log

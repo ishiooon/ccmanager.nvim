@@ -66,6 +66,55 @@ Press `<leader>cm` (default) to toggle the CCManager terminal window.
 - `<C-w>` - Window navigation from terminal mode / ターミナルモードからのウィンドウ操作
 - `<Esc>` - Passed through to CCManager for TUI operations / CCManagerのTUI操作に使用
 
+## Testing / テスト
+
+### Running tests / テストの実行
+
+This plugin uses [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) for testing.
+
+このプラグインは[plenary.nvim](https://github.com/nvim-lua/plenary.nvim)を使用してテストを行っています。
+
+#### Prerequisites / 前提条件
+
+Install plenary.nvim if you haven't already:
+
+plenary.nvimがインストールされていない場合はインストールしてください：
+
+```lua
+-- Using lazy.nvim
+{ 'nvim-lua/plenary.nvim' }
+```
+
+#### Run all tests / 全てのテストを実行
+
+```bash
+nvim --headless -c "PlenaryBustedDirectory tests/ {minimal_init = 'tests/minimal_init.lua'}"
+```
+
+#### Run specific test file / 特定のテストファイルを実行
+
+```bash
+nvim --headless -c "PlenaryBustedFile tests/ccmanager_spec.lua"
+```
+
+#### Run tests from within Neovim / Neovim内からテストを実行
+
+```vim
+:PlenaryBustedDirectory tests/
+```
+
+### Continuous Integration / 継続的インテグレーション
+
+This project uses GitHub Actions for automated testing. Tests are run on:
+
+このプロジェクトではGitHub Actionsを使用して自動テストを行っています。以下の条件でテストが実行されます：
+
+- Push to `main` or `develop` branches / `main`または`develop`ブランチへのプッシュ時
+- Pull requests to `main` branch / `main`ブランチへのプルリクエスト時
+- Multiple Neovim versions (stable and nightly) / 複数のNeovimバージョン（安定版と開発版）
+
+![Tests](https://github.com/ishiooon/ccmanager.nvim/workflows/Tests/badge.svg)
+
 ## Credits
 
 - [kbwo/ccmanager](https://github.com/kbwo/ccmanager) - The amazing CCManager TUI application
