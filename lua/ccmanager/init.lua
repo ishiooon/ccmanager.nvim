@@ -7,6 +7,13 @@ M.config = {
     position = "right",
   },
   command = "npx ccmanager",
+  terminal_keymaps = {
+    -- ターミナルモードから通常モードへの切り替え
+    -- エスケープキーのマッピングを削除し、代わりに<C-q>を使用
+    normal_mode = "<C-q>",
+    -- ウィンドウ操作のキーマッピング
+    window_nav = "<C-w>",
+  },
 }
 
 function M.setup(opts)

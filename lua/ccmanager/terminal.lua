@@ -32,8 +32,14 @@ function M.toggle()
       hidden = false,
       on_open = function(term)
         vim.cmd("startinsert!")
-        vim.keymap.set("t", "<Esc>", [[<C-\><C-n>]], { buffer = term.bufnr })
-        vim.keymap.set("t", "<C-w>", [[<C-\><C-n><C-w>]], { buffer = term.bufnr })
+        -- エスケープキーはCCManagerのTUI操作に使用されるため、マッピングしない
+        -- 代わりに設定可能なキーで通常モードへ切り替え
+        if M.config.terminal_keymaps and M.config.terminal_keymaps.normal_mode then
+          vim.keymap.set("t", M.config.terminal_keymaps.normal_mode, [[<C-\><C-n>]], { buffer = term.bufnr, desc = "Exit terminal mode" })
+        end
+        if M.config.terminal_keymaps and M.config.terminal_keymaps.window_nav then
+          vim.keymap.set("t", M.config.terminal_keymaps.window_nav, [[<C-\><C-n><C-w>]], { buffer = term.bufnr, desc = "Window navigation" })
+        end
       end,
     })
   end
