@@ -1,11 +1,49 @@
 local M = {}
 local terminal = nil
 
+local function check_nodejs()
+  local handle = io.popen("which node 2>/dev/null")
+  if handle then
+    local result = handle:read("*a")
+    handle:close()
+    return result ~= ""
+  end
+  return false
+end
+
+local function check_ccmanager()
+  local handle = io.popen("which ccmanager 2>/dev/null || which npx 2>/dev/null")
+  if handle then
+    local result = handle:read("*a")
+    handle:close()
+    return result ~= ""
+  end
+  return false
+end
+
+local function validate_dependencies()
+  if not check_nodejs() then
+    vim.notify("CCManager: Node.js is not installed. Please install Node.js first.", vim.log.levels.ERROR)
+    return false
+  end
+  
+  if not check_ccmanager() then
+    vim.notify("CCManager: 'ccmanager' command not found. Please install it with 'npm install -g ccmanager'", vim.log.levels.ERROR)
+    return false
+  end
+  
+  return true
+end
+
 function M.setup(config)
   M.config = config
 end
 
 function M.toggle()
+  if not validate_dependencies() then
+    return
+  end
+  
   local ok, toggleterm = pcall(require, "toggleterm")
   if not ok then
     vim.notify("CCManager: toggleterm.nvim is required", vim.log.levels.ERROR)

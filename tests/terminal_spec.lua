@@ -23,7 +23,87 @@ describe("ccmanager.terminal", function()
   end)
   
   describe("toggle()", function()
+    it("Node.jsがインストールされていない場合エラーメッセージを表示", function()
+      -- io.popenのモック（Node.jsが見つからない）
+      local original_popen = io.popen
+      io.popen = function(cmd)
+        if cmd:match("which node") then
+          return {
+            read = function() return "" end,
+            close = function() end
+          }
+        end
+        return original_popen(cmd)
+      end
+      
+      local notify_called = false
+      local original_notify = vim.notify
+      vim.notify = function(msg, level)
+        if msg:match("Node.js is not installed") and level == vim.log.levels.ERROR then
+          notify_called = true
+        end
+      end
+      
+      terminal.setup({ command = "test" })
+      terminal.toggle()
+      
+      io.popen = original_popen
+      vim.notify = original_notify
+      assert.is_true(notify_called)
+    end)
+    
+    it("ccmanagerコマンドが存在しない場合エラーメッセージを表示", function()
+      -- io.popenのモック（Node.jsは存在、ccmanager/npxは存在しない）
+      local original_popen = io.popen
+      io.popen = function(cmd)
+        if cmd:match("which node") then
+          return {
+            read = function() return "/usr/bin/node" end,
+            close = function() end
+          }
+        elseif cmd:match("which ccmanager") or cmd:match("which npx") then
+          return {
+            read = function() return "" end,
+            close = function() end
+          }
+        end
+        return original_popen(cmd)
+      end
+      
+      local notify_called = false
+      local original_notify = vim.notify
+      vim.notify = function(msg, level)
+        if msg:match("'ccmanager' command not found") and level == vim.log.levels.ERROR then
+          notify_called = true
+        end
+      end
+      
+      terminal.setup({ command = "test" })
+      terminal.toggle()
+      
+      io.popen = original_popen
+      vim.notify = original_notify
+      assert.is_true(notify_called)
+    end)
+    
     it("toggleterm.nvimが存在しない場合エラーメッセージを表示", function()
+      -- io.popenのモック（依存関係はOK）
+      local original_popen = io.popen
+      io.popen = function(cmd)
+        if cmd:match("which node") then
+          return {
+            read = function() return "/usr/bin/node" end,
+            close = function() end
+          }
+        elseif cmd:match("which ccmanager") or cmd:match("which npx") then
+          return {
+            read = function() return "/usr/bin/npx" end,
+            close = function() end
+          }
+        end
+        return original_popen(cmd)
+      end
+      
       -- toggletermをモック
       package.loaded["toggleterm"] = nil
       
@@ -38,11 +118,29 @@ describe("ccmanager.terminal", function()
       terminal.setup({ command = "test" })
       terminal.toggle()
       
+      io.popen = original_popen
       vim.notify = original_notify
       assert.is_true(notify_called)
     end)
     
     it("ターミナルが作成される", function()
+      -- io.popenのモック（依存関係はOK）
+      local original_popen = io.popen
+      io.popen = function(cmd)
+        if cmd:match("which node") then
+          return {
+            read = function() return "/usr/bin/node" end,
+            close = function() end
+          }
+        elseif cmd:match("which ccmanager") or cmd:match("which npx") then
+          return {
+            read = function() return "/usr/bin/npx" end,
+            close = function() end
+          }
+        end
+        return original_popen(cmd)
+      end
+      
       -- toggletermモジュールのモック
       local terminal_new_called = false
       local terminal_toggle_called = false
@@ -74,12 +172,38 @@ describe("ccmanager.terminal", function()
       })
       terminal.toggle()
       
+      io.popen = original_popen
       assert.is_true(terminal_new_called)
       assert.is_true(terminal_toggle_called)
     end)
   end)
   
   describe("ウィンドウサイズ計算", function()
+    local original_popen
+    
+    before_each(function()
+      -- io.popenのモック（依存関係はOK）
+      original_popen = io.popen
+      io.popen = function(cmd)
+        if cmd:match("which node") then
+          return {
+            read = function() return "/usr/bin/node" end,
+            close = function() end
+          }
+        elseif cmd:match("which ccmanager") or cmd:match("which npx") then
+          return {
+            read = function() return "/usr/bin/npx" end,
+            close = function() end
+          }
+        end
+        return original_popen(cmd)
+      end
+    end)
+    
+    after_each(function()
+      io.popen = original_popen
+    end)
+    
     it("垂直分割の場合は列数を計算", function()
       -- toggletermモジュールのモック
       local size_function
@@ -172,6 +296,31 @@ describe("ccmanager.terminal", function()
   end)
   
   describe("キーマッピング", function()
+    local original_popen
+    
+    before_each(function()
+      -- io.popenのモック（依存関係はOK）
+      original_popen = io.popen
+      io.popen = function(cmd)
+        if cmd:match("which node") then
+          return {
+            read = function() return "/usr/bin/node" end,
+            close = function() end
+          }
+        elseif cmd:match("which ccmanager") or cmd:match("which npx") then
+          return {
+            read = function() return "/usr/bin/npx" end,
+            close = function() end
+          }
+        end
+        return original_popen(cmd)
+      end
+    end)
+    
+    after_each(function()
+      io.popen = original_popen
+    end)
+    
     it("on_open関数でキーマップが設定される", function()
       -- toggletermモジュールのモック
       local on_open_function
