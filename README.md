@@ -47,6 +47,10 @@ require("ccmanager").setup({
     position = "right",            -- Window position: "right", "left", "bottom", "top"
   },
   command = "npx ccmanager",       -- Command to run CCManager
+  terminal_keymaps = {
+    normal_mode = "<C-q>",         -- Keymap to exit terminal mode (default: <C-q>)
+    window_nav = "<C-w>",          -- Keymap for window navigation (default: <C-w>)
+  },
 })
 ```
 
@@ -58,8 +62,9 @@ Press `<leader>cm` (default) to toggle the CCManager terminal window.
 
 ### Key mappings in terminal mode / ターミナルモードでのキーマッピング
 
-- `<Esc>` - Exit terminal mode to normal mode / ターミナルモードからノーマルモードへ
+- `<C-q>` - Exit terminal mode to normal mode / ターミナルモードからノーマルモードへ
 - `<C-w>` - Window navigation from terminal mode / ターミナルモードからのウィンドウ操作
+- `<Esc>` - Passed through to CCManager for TUI operations / CCManagerのTUI操作に使用
 
 ## Credits
 
