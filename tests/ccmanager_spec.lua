@@ -2,10 +2,31 @@ describe("ccmanager", function()
   local ccmanager
   
   before_each(function()
+    -- toggleterm.nvimが存在しない可能性があるため、モックする
+    if not package.loaded["toggleterm"] then
+      package.loaded["toggleterm"] = {
+        setup = function() end,
+      }
+    end
+    if not package.loaded["toggleterm.terminal"] then
+      package.loaded["toggleterm.terminal"] = {
+        Terminal = {
+          new = function(opts)
+            return {
+              toggle = function() end,
+              is_open = function() return false end,
+            }
+          end,
+        },
+      }
+    end
+    
     -- モジュールをリロード
     package.loaded["ccmanager"] = nil
     package.loaded["ccmanager.init"] = nil
     package.loaded["ccmanager.terminal"] = nil
+    package.loaded["ccmanager.utils"] = nil
+    
     ccmanager = require("ccmanager")
   end)
   

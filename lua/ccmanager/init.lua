@@ -13,6 +13,14 @@ M.config = {
     normal_mode = "<C-q>",
     -- ウィンドウ操作のキーマッピング
     window_nav = "<C-w>",
+    -- ペースト用のキーマッピング（WSL2環境で有用）
+    paste = "<C-S-v>",
+  },
+  -- WSL2環境での最適化
+  wsl_optimization = {
+    enabled = true,  -- WSL2環境での最適化を有効化
+    check_clipboard = true,  -- クリップボード設定をチェック
+    fix_paste = true,  -- ペースト問題の修正を適用
   },
 }
 
