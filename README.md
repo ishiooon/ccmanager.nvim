@@ -50,6 +50,13 @@ require("ccmanager").setup({
   terminal_keymaps = {
     normal_mode = "<C-q>",         -- Keymap to exit terminal mode (default: <C-q>)
     window_nav = "<C-w>",          -- Keymap for window navigation (default: <C-w>)
+    paste = "<C-S-v>",             -- Keymap for paste in terminal mode (default: <C-S-v>)
+  },
+  -- WSL2 optimization (enabled by default)
+  wsl_optimization = {
+    enabled = true,                -- Enable WSL2 optimizations
+    check_clipboard = true,        -- Check clipboard configuration
+    fix_paste = true,              -- Apply paste issue fixes
   },
 })
 ```
@@ -65,6 +72,56 @@ Press `<leader>cm` (default) to toggle the CCManager terminal window.
 - `<C-q>` - Exit terminal mode to normal mode / ターミナルモードからノーマルモードへ
 - `<C-w>` - Window navigation from terminal mode / ターミナルモードからのウィンドウ操作
 - `<Esc>` - Passed through to CCManager for TUI operations / CCManagerのTUI操作に使用
+
+## Troubleshooting / トラブルシューティング
+
+### WSL2 Paste Issues / WSL2でのペースト問題
+
+If you experience character loss when pasting in WSL2 environment, try the following solutions:
+
+WSL2環境でペースト時に文字が欠落する場合は、以下の解決策を試してください：
+
+#### 1. Optimize Clipboard Configuration / クリップボード設定の最適化
+
+Add this to your Neovim configuration:
+
+Neovimの設定に以下を追加してください：
+
+```lua
+-- WSL2 optimized clipboard configuration
+vim.g.clipboard = {
+  name = 'WslClipboard',
+  copy = {
+    ['+'] = 'clip.exe',
+    ['*'] = 'clip.exe',
+  },
+  paste = {
+    ['+'] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
+    ['*'] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
+  },
+  cache_enabled = 0,
+}
+```
+
+#### 2. Use Alternative Paste Methods / 代替のペースト方法を使用
+
+- Use `Ctrl+Shift+V` (configured by default) / `Ctrl+Shift+V`を使用（デフォルトで設定済み）
+- Exit to normal mode (`<C-q>`) and paste with `"+p` / 通常モードに戻って（`<C-q>`）`"+p`でペースト
+- Right-click paste in your terminal / ターミナルで右クリックペースト
+
+#### 3. Disable WSL2 Optimizations / WSL2最適化を無効化
+
+If the optimizations cause issues, you can disable them:
+
+最適化が問題を引き起こす場合は、無効化できます：
+
+```lua
+require("ccmanager").setup({
+  wsl_optimization = {
+    enabled = false,
+  },
+})
+```
 
 ## Testing / テスト
 

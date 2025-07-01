@@ -1,5 +1,6 @@
 local M = {}
 local terminal = nil
+local utils = require("ccmanager.utils")
 
 local function check_nodejs()
   local handle = io.popen("which node 2>/dev/null")
@@ -77,6 +78,23 @@ function M.toggle()
           local expected_width = math.max(math.floor(vim.o.columns * M.config.window.size), 30)
           vim.api.nvim_win_set_width(0, expected_width)
         end
+        
+        -- WSL2環境での最適化
+        if M.config.wsl_optimization and M.config.wsl_optimization.enabled and utils.is_wsl() then
+          -- クリップボード設定をチェック
+          if M.config.wsl_optimization.check_clipboard and not utils.check_clipboard_config() then
+            vim.notify("CCManager: WSL2環境でクリップボード設定が最適化されていません。READMEを参照してください。", vim.log.levels.WARN)
+          end
+          
+          -- ペースト問題の修正
+          if M.config.wsl_optimization.fix_paste then
+            -- Bracketed Paste Modeを無効化
+            vim.cmd("set t_BE=")
+            -- ターミナルバッファでpaste設定を調整
+            vim.bo[term.bufnr].paste = false
+          end
+        end
+        
         vim.cmd("startinsert!")
         -- エスケープキーはCCManagerのTUI操作に使用されるため、マッピングしない
         -- 代わりに設定可能なキーで通常モードへ切り替え
@@ -85,6 +103,10 @@ function M.toggle()
         end
         if M.config.terminal_keymaps and M.config.terminal_keymaps.window_nav then
           vim.keymap.set("t", M.config.terminal_keymaps.window_nav, [[<C-\><C-n><C-w>]], { buffer = term.bufnr, desc = "Window navigation" })
+        end
+        -- ペースト用のキーマッピング（WSL2環境で有用）
+        if M.config.terminal_keymaps and M.config.terminal_keymaps.paste then
+          vim.keymap.set("t", M.config.terminal_keymaps.paste, [[<C-\><C-n>"+pi]], { buffer = term.bufnr, desc = "Paste from clipboard" })
         end
       end,
     })

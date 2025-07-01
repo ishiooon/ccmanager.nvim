@@ -261,7 +261,7 @@ describe("ccmanager.terminal", function()
       local term_mock = { direction = "vertical" }
       local calculated_size = size_function(term_mock)
       
-      assert.are.equal(20, calculated_size) -- 最小値の20を確保
+      assert.are.equal(30, calculated_size) -- 最小値の30を確保
     end)
     
     it("水平分割の場合は行数を計算", function()
