@@ -37,7 +37,12 @@ local function validate_dependencies()
 end
 
 function M.setup(config)
-  M.config = config
+  M.config = config or {}
+  -- デフォルト値を設定
+  M.config.window = M.config.window or {
+    size = 0.3,
+    position = "bottom"
+  }
 end
 
 function M.toggle()

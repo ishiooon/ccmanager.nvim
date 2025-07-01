@@ -1,1 +1,1 @@
-return require("ccmanager")
+return require("ccmanager.init")

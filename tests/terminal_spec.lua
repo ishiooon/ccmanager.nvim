@@ -44,7 +44,13 @@ describe("ccmanager.terminal", function()
         end
       end
       
-      terminal.setup({ command = "test" })
+      terminal.setup({ 
+        command = "test",
+        window = {
+          size = 0.3,
+          position = "bottom"
+        }
+      })
       terminal.toggle()
       
       io.popen = original_popen
@@ -78,7 +84,13 @@ describe("ccmanager.terminal", function()
         end
       end
       
-      terminal.setup({ command = "test" })
+      terminal.setup({ 
+        command = "test",
+        window = {
+          size = 0.3,
+          position = "bottom"
+        }
+      })
       terminal.toggle()
       
       io.popen = original_popen
@@ -115,7 +127,13 @@ describe("ccmanager.terminal", function()
         end
       end
       
-      terminal.setup({ command = "test" })
+      terminal.setup({ 
+        command = "test",
+        window = {
+          size = 0.3,
+          position = "bottom"
+        }
+      })
       terminal.toggle()
       
       io.popen = original_popen
