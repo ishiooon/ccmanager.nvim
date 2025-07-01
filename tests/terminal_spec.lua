@@ -116,8 +116,18 @@ describe("ccmanager.terminal", function()
         return original_popen(cmd)
       end
       
-      -- toggletermをモック
+      -- toggletermの読み込みが失敗するようにモック
       package.loaded["toggleterm"] = nil
+      package.loaded["toggleterm.terminal"] = nil
+      
+      -- requireをモックして、toggletermの読み込みだけ失敗させる
+      local original_require = require
+      _G.require = function(module)
+        if module == "toggleterm" then
+          error("module 'toggleterm' not found")
+        end
+        return original_require(module)
+      end
       
       local notify_called = false
       local original_notify = vim.notify
@@ -138,6 +148,7 @@ describe("ccmanager.terminal", function()
       
       io.popen = original_popen
       vim.notify = original_notify
+      _G.require = original_require
       assert.is_true(notify_called)
     end)
     
