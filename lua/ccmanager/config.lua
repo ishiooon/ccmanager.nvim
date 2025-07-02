@@ -76,7 +76,8 @@ validators.keymap = function(value)
     return false, "keymap cannot be empty"
   end
   -- 基本的なキーマップパターンをチェック
-  if not value:match("^[<]?[%w%-]+[>]?") then
+  -- <leader>、<C-x>、\cm、<F5>などの一般的なパターンを許可
+  if not (value:match("^<.+>") or value:match("^\\%w+") or value:match("^[%w%-]+$")) then
     return false, "keymap appears to be invalid"
   end
   return true

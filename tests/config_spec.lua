@@ -15,28 +15,42 @@ describe("ccmanager config", function()
     end)
     
     it("should reject invalid window.size (not a number)", function()
-      local notify_called = false
+      local notify_messages = {}
       vim.notify = function(msg, level)
-        notify_called = true
-        assert.truthy(string.find(msg, "window.size must be a number"))
+        table.insert(notify_messages, msg)
       end
       
       local test_config = { window = { size = "invalid" } }
       local result = config.validate(test_config)
-      assert.is_true(notify_called)
+      assert.is_true(#notify_messages > 0)
+      local found = false
+      for _, msg in ipairs(notify_messages) do
+        if string.find(msg, "window.size must be a number") then
+          found = true
+          break
+        end
+      end
+      assert.is_true(found)
       assert.equals(config.defaults.window.size, result.window.size)
     end)
     
     it("should reject invalid window.size (out of range)", function()
-      local notify_called = false
+      local notify_messages = {}
       vim.notify = function(msg, level)
-        notify_called = true
-        assert.truthy(string.find(msg, "window.size must be between 0 and 1"))
+        table.insert(notify_messages, msg)
       end
       
       local test_config = { window = { size = 1.5 } }
       local result = config.validate(test_config)
-      assert.is_true(notify_called)
+      assert.is_true(#notify_messages > 0)
+      local found = false
+      for _, msg in ipairs(notify_messages) do
+        if string.find(msg, "window.size must be between 0 and 1") then
+          found = true
+          break
+        end
+      end
+      assert.is_true(found)
       assert.equals(config.defaults.window.size, result.window.size)
     end)
     
@@ -50,15 +64,22 @@ describe("ccmanager config", function()
     end)
     
     it("should reject invalid window.position", function()
-      local notify_called = false
+      local notify_messages = {}
       vim.notify = function(msg, level)
-        notify_called = true
-        assert.truthy(string.find(msg, "window.position must be one of"))
+        table.insert(notify_messages, msg)
       end
       
       local test_config = { window = { position = "invalid" } }
       local result = config.validate(test_config)
-      assert.is_true(notify_called)
+      assert.is_true(#notify_messages > 0)
+      local found = false
+      for _, msg in ipairs(notify_messages) do
+        if string.find(msg, "window.position must be one of") then
+          found = true
+          break
+        end
+      end
+      assert.is_true(found)
       assert.equals(config.defaults.window.position, result.window.position)
     end)
     
@@ -69,15 +90,22 @@ describe("ccmanager config", function()
     end)
     
     it("should reject empty command", function()
-      local notify_called = false
+      local notify_messages = {}
       vim.notify = function(msg, level)
-        notify_called = true
-        assert.truthy(string.find(msg, "command cannot be empty"))
+        table.insert(notify_messages, msg)
       end
       
       local test_config = { command = "" }
       local result = config.validate(test_config)
-      assert.is_true(notify_called)
+      assert.is_true(#notify_messages > 0)
+      local found = false
+      for _, msg in ipairs(notify_messages) do
+        if string.find(msg, "command cannot be empty") then
+          found = true
+          break
+        end
+      end
+      assert.is_true(found)
       assert.equals(config.defaults.command, result.command)
     end)
     
@@ -115,15 +143,22 @@ describe("ccmanager config", function()
     end)
     
     it("should reject invalid terminal_keymaps", function()
-      local notify_called = false
+      local notify_messages = {}
       vim.notify = function(msg, level)
-        notify_called = true
-        assert.truthy(string.find(msg, "terminal_keymaps"))
+        table.insert(notify_messages, msg)
       end
       
       local test_config = { terminal_keymaps = "invalid" }
       local result = config.validate(test_config)
-      assert.is_true(notify_called)
+      assert.is_true(#notify_messages > 0)
+      local found = false
+      for _, msg in ipairs(notify_messages) do
+        if string.find(msg, "terminal_keymaps") then
+          found = true
+          break
+        end
+      end
+      assert.is_true(found)
       assert.same(config.defaults.terminal_keymaps, result.terminal_keymaps)
     end)
     
@@ -140,10 +175,9 @@ describe("ccmanager config", function()
     end)
     
     it("should reject invalid wsl_optimization.enabled", function()
-      local notify_called = false
+      local notify_messages = {}
       vim.notify = function(msg, level)
-        notify_called = true
-        assert.truthy(string.find(msg, "wsl_optimization.enabled must be a boolean"))
+        table.insert(notify_messages, msg)
       end
       
       local test_config = {
@@ -152,7 +186,15 @@ describe("ccmanager config", function()
         }
       }
       local result = config.validate(test_config)
-      assert.is_true(notify_called)
+      assert.is_true(#notify_messages > 0)
+      local found = false
+      for _, msg in ipairs(notify_messages) do
+        if string.find(msg, "wsl_optimization.enabled must be a boolean") then
+          found = true
+          break
+        end
+      end
+      assert.is_true(found)
     end)
   end)
   
