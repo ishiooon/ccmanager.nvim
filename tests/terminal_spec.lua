@@ -178,18 +178,19 @@ describe("ccmanager.terminal", function()
       }
       
       package.loaded["toggleterm"] = {}
+      local Terminal_mock = {}
+      Terminal_mock.__index = Terminal_mock
+      function Terminal_mock:new(opts)
+        terminal_new_called = true
+        assert.are.equal("test command", opts.cmd)
+        assert.are.equal(true, opts.close_on_exit)
+        assert.are.equal(false, opts.hidden)
+        assert.is_function(opts.size)
+        assert.is_function(opts.on_open)
+        return mock_terminal
+      end
       package.loaded["toggleterm.terminal"] = {
-        Terminal = {
-          new = function(self, opts)
-            terminal_new_called = true
-            assert.are.equal("test command", opts.cmd)
-            assert.are.equal(true, opts.close_on_exit)
-            assert.are.equal(false, opts.hidden)
-            assert.is_function(opts.size)
-            assert.is_function(opts.on_open)
-            return mock_terminal
-          end
-        }
+        Terminal = Terminal_mock
       }
       
       terminal.setup({
@@ -237,14 +238,19 @@ describe("ccmanager.terminal", function()
       -- toggletermモジュールのモック
       local size_function
       package.loaded["toggleterm"] = {}
+      local Terminal_mock = {}
+      Terminal_mock.__index = Terminal_mock
+      function Terminal_mock:new(opts)
+        size_function = opts.size
+        return { toggle = function() end }
+      end
       package.loaded["toggleterm.terminal"] = {
-        Terminal = {
-          new = function(self, opts)
-            size_function = opts.size
-            return { toggle = function() end }
-          end
-        }
+        Terminal = Terminal_mock
       }
+      
+      -- terminalモジュールをリロード
+      package.loaded["ccmanager.terminal"] = nil
+      terminal = require("ccmanager.terminal")
       
       terminal.setup({
         command = "test",
@@ -267,14 +273,19 @@ describe("ccmanager.terminal", function()
       -- toggletermモジュールのモック
       local size_function
       package.loaded["toggleterm"] = {}
+      local Terminal_mock = {}
+      Terminal_mock.__index = Terminal_mock
+      function Terminal_mock:new(opts)
+        size_function = opts.size
+        return { toggle = function() end }
+      end
       package.loaded["toggleterm.terminal"] = {
-        Terminal = {
-          new = function(self, opts)
-            size_function = opts.size
-            return { toggle = function() end }
-          end
-        }
+        Terminal = Terminal_mock
       }
+      
+      -- terminalモジュールをリロード
+      package.loaded["ccmanager.terminal"] = nil
+      terminal = require("ccmanager.terminal")
       
       terminal.setup({
         command = "test",
@@ -297,14 +308,19 @@ describe("ccmanager.terminal", function()
       -- toggletermモジュールのモック
       local size_function
       package.loaded["toggleterm"] = {}
+      local Terminal_mock = {}
+      Terminal_mock.__index = Terminal_mock
+      function Terminal_mock:new(opts)
+        size_function = opts.size
+        return { toggle = function() end }
+      end
       package.loaded["toggleterm.terminal"] = {
-        Terminal = {
-          new = function(self, opts)
-            size_function = opts.size
-            return { toggle = function() end }
-          end
-        }
+        Terminal = Terminal_mock
       }
+      
+      -- terminalモジュールをリロード
+      package.loaded["ccmanager.terminal"] = nil
+      terminal = require("ccmanager.terminal")
       
       terminal.setup({
         command = "test",
@@ -354,14 +370,19 @@ describe("ccmanager.terminal", function()
       -- toggletermモジュールのモック
       local on_open_function
       package.loaded["toggleterm"] = {}
+      local Terminal_mock = {}
+      Terminal_mock.__index = Terminal_mock
+      function Terminal_mock:new(opts)
+        on_open_function = opts.on_open
+        return { toggle = function() end }
+      end
       package.loaded["toggleterm.terminal"] = {
-        Terminal = {
-          new = function(self, opts)
-            on_open_function = opts.on_open
-            return { toggle = function() end }
-          end
-        }
+        Terminal = Terminal_mock
       }
+      
+      -- terminalモジュールをリロード
+      package.loaded["ccmanager.terminal"] = nil
+      terminal = require("ccmanager.terminal")
       
       terminal.setup({
         command = "test",
@@ -472,15 +493,16 @@ describe("ccmanager.terminal", function()
       
       -- toggletermモジュールのモック
       package.loaded["toggleterm"] = {}
+      local Terminal_mock = {}
+      Terminal_mock.__index = Terminal_mock
+      function Terminal_mock:new(opts)
+        -- on_open関数を手動で呼び出して設定を適用
+        local term_mock = { bufnr = 123, direction = "horizontal" }
+        opts.on_open(term_mock)
+        return { toggle = function() end }
+      end
       package.loaded["toggleterm.terminal"] = {
-        Terminal = {
-          new = function(self, opts)
-            -- on_open関数を手動で呼び出して設定を適用
-            local term_mock = { bufnr = 123, direction = "horizontal" }
-            opts.on_open(term_mock)
-            return { toggle = function() end }
-          end
-        }
+        Terminal = Terminal_mock
       }
       
       -- terinalモジュールをリロードして新しいモックを使用
@@ -550,14 +572,15 @@ describe("ccmanager.terminal", function()
       
       -- toggletermモジュールのモック
       package.loaded["toggleterm"] = {}
+      local Terminal_mock = {}
+      Terminal_mock.__index = Terminal_mock
+      function Terminal_mock:new(opts)
+        local term_mock = { bufnr = 123, direction = "horizontal" }
+        opts.on_open(term_mock)
+        return { toggle = function() end }
+      end
       package.loaded["toggleterm.terminal"] = {
-        Terminal = {
-          new = function(self, opts)
-            local term_mock = { bufnr = 123, direction = "horizontal" }
-            opts.on_open(term_mock)
-            return { toggle = function() end }
-          end
-        }
+        Terminal = Terminal_mock
       }
       
       -- terminalモジュールをリロード
@@ -641,14 +664,15 @@ describe("ccmanager.terminal", function()
       
       -- toggletermモジュールのモック
       package.loaded["toggleterm"] = {}
+      local Terminal_mock = {}
+      Terminal_mock.__index = Terminal_mock
+      function Terminal_mock:new(opts)
+        local term_mock = { bufnr = 123, direction = "horizontal" }
+        opts.on_open(term_mock)
+        return { toggle = function() end }
+      end
       package.loaded["toggleterm.terminal"] = {
-        Terminal = {
-          new = function(self, opts)
-            local term_mock = { bufnr = 123, direction = "horizontal" }
-            opts.on_open(term_mock)
-            return { toggle = function() end }
-          end
-        }
+        Terminal = Terminal_mock
       }
       
       -- terminalモジュールをリロード
@@ -742,14 +766,15 @@ describe("ccmanager.terminal", function()
       
       -- toggletermモジュールのモック
       package.loaded["toggleterm"] = {}
+      local Terminal_mock = {}
+      Terminal_mock.__index = Terminal_mock
+      function Terminal_mock:new(opts)
+        local term_mock = { bufnr = 123, direction = "horizontal" }
+        opts.on_open(term_mock)
+        return { toggle = function() end }
+      end
       package.loaded["toggleterm.terminal"] = {
-        Terminal = {
-          new = function(self, opts)
-            local term_mock = { bufnr = 123, direction = "horizontal" }
-            opts.on_open(term_mock)
-            return { toggle = function() end }
-          end
-        }
+        Terminal = Terminal_mock
       }
       
       -- terminalモジュールをリロード
