@@ -58,6 +58,7 @@ require("ccmanager").setup({
     check_clipboard = true,        -- Check clipboard configuration
     fix_paste = true,              -- Apply paste issue fixes
   },
+  debug = false,                   -- Enable debug mode for verbose logging
 })
 ```
 
@@ -72,6 +73,42 @@ Press `<leader>cm` (default) to toggle the CCManager terminal window.
 - `<C-q>` - Exit terminal mode to normal mode / ターミナルモードからノーマルモードへ
 - `<C-w>` - Window navigation from terminal mode / ターミナルモードからのウィンドウ操作
 - `<Esc>` - Passed through to CCManager for TUI operations / CCManagerのTUI操作に使用
+
+### Commands / コマンド
+
+- `:CCManagerDebug on/off` - Toggle debug mode / デバッグモードの切り替え
+- `:CCManagerStatus` - Show terminal status / ターミナルの状態を表示
+- `:CCManagerReset` - Reset terminal instance / ターミナルインスタンスをリセット
+- `:CCManagerKill` - Force kill CCManager process / CCManagerプロセスを強制終了
+
+## Error Handling and Debugging / エラーハンドリングとデバッグ
+
+### Enhanced Error Handling / 強化されたエラーハンドリング
+
+This plugin includes comprehensive error handling features:
+
+このプラグインは包括的なエラーハンドリング機能を備えています：
+
+- **Automatic retry**: Terminal creation with exponential backoff / **自動リトライ**: 指数バックオフによるターミナル作成
+- **Process monitoring**: Detects abnormal process termination / **プロセス監視**: 異常なプロセス終了を検出
+- **Detailed error messages**: Context-aware error reporting / **詳細なエラーメッセージ**: コンテキストを考慮したエラー報告
+- **Safe API calls**: All Neovim API calls are wrapped for safety / **安全なAPI呼び出し**: 全てのNeovim API呼び出しを安全にラップ
+
+### Debug Mode / デバッグモード
+
+Enable debug mode to see detailed logs:
+
+デバッグモードを有効にして詳細なログを確認できます：
+
+```lua
+-- In setup configuration
+require("ccmanager").setup({
+  debug = true,
+})
+
+-- Or using command
+:CCManagerDebug on
+```
 
 ## Troubleshooting / トラブルシューティング
 
