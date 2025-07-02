@@ -458,17 +458,31 @@ describe("ccmanager.terminal", function()
       })
       terminal.toggle()
       
-      -- vim.cmdとvim.api.nvim_buf_set_optionのモック
+      -- vim.cmdのモック
       local commands_called = {}
       local original_cmd = vim.cmd
       vim.cmd = function(cmd) 
         table.insert(commands_called, cmd)
       end
       
-      local buf_opts_set = {}
-      local original_buf_set_option = vim.api.nvim_buf_set_option
-      vim.api.nvim_buf_set_option = function(bufnr, option, value)
-        table.insert(buf_opts_set, {bufnr = bufnr, option = option, value = value})
+      -- vim.opt_localのモック
+      local opt_local_set = false
+      local original_opt_local = vim.opt_local
+      vim.opt_local = setmetatable({}, {
+        __newindex = function(t, k, v)
+          if k == "ttimeoutlen" and v == 0 then
+            opt_local_set = true
+          end
+        end
+      })
+      
+      -- vim.fn.hasのモック (Neovim 0.8以降として)
+      local original_has = vim.fn.has
+      vim.fn.has = function(feature)
+        if feature == 'nvim-0.8' then
+          return 1
+        end
+        return original_has(feature)
       end
       
       -- on_openを実行
@@ -476,7 +490,8 @@ describe("ccmanager.terminal", function()
       on_open_function(term_mock)
       
       vim.cmd = original_cmd
-      vim.api.nvim_buf_set_option = original_buf_set_option
+      vim.opt_local = original_opt_local
+      vim.fn.has = original_has
       
       -- 設定が適用されたか確認
       local found_tbe = false
@@ -488,15 +503,8 @@ describe("ccmanager.terminal", function()
       end
       assert.is_true(found_tbe, "t_BE should be disabled")
       
-      -- modifiableオプションが設定されたか確認
-      local found_modifiable = false
-      for _, opt in ipairs(buf_opts_set) do
-        if opt.bufnr == 123 and opt.option == "modifiable" and opt.value == true then
-          found_modifiable = true
-          break
-        end
-      end
-      assert.is_true(found_modifiable, "modifiable should be set to true")
+      -- ttimeoutlenが設定されたか確認
+      assert.is_true(opt_local_set, "ttimeoutlen should be set to 0")
     end)
   end)
 end)
