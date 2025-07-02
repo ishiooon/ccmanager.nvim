@@ -47,17 +47,17 @@ end
 
 -- 安全にコマンドを実行
 function M.safe_execute(cmd, error_msg, context)
-  local handle = io.popen(cmd .. " 2>&1")
-  if not handle then
+  local ok, result = pcall(vim.fn.system, cmd)
+  
+  if not ok then
     M.error(error_msg or ("Failed to execute command: " .. cmd), context)
     return nil, "Failed to execute command"
   end
-
-  local result = handle:read("*a")
-  local success, exit_type, code = handle:close()
   
-  if not success or code ~= 0 then
-    local err_msg = string.format("Command failed: %s (exit code: %s)", cmd, tostring(code or "unknown"))
+  local exit_code = vim.v.shell_error
+  
+  if exit_code ~= 0 then
+    local err_msg = string.format("Command failed: %s (exit code: %d)", cmd, exit_code)
     M.error(error_msg or err_msg, context)
     return nil, err_msg
   end
