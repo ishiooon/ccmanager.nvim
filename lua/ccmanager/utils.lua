@@ -2,7 +2,12 @@ local M = {}
 
 -- WSL2環境かどうかを検出する
 function M.is_wsl()
-  local uname = vim.fn.system("uname -r")
+  local ok, uname = pcall(vim.fn.system, "uname -r")
+  if not ok then
+    -- error_handlerを使わずに直接処理
+    vim.notify("[CCManager] [Utils] Failed to detect WSL environment", vim.log.levels.WARN)
+    return false
+  end
   return string.find(uname, "microsoft") ~= nil or string.find(uname, "WSL") ~= nil
 end
 

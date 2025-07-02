@@ -1,38 +1,40 @@
 local M = {}
 local terminal = nil
 local utils = require("ccmanager.utils")
+local error_handler = require("ccmanager.error")
 
 local function check_nodejs()
-  local handle = io.popen("which node 2>/dev/null")
-  if handle then
-    local result = handle:read("*a")
-    handle:close()
-    return result ~= ""
+  error_handler.debug("Checking for Node.js installation", "Dependencies")
+  local result, err = error_handler.safe_execute("which node 2>/dev/null", nil, "Dependencies")
+  if not result then
+    error_handler.debug("Node.js check failed: " .. tostring(err), "Dependencies")
+    return false
   end
-  return false
+  return result:gsub("%s+", "") ~= ""
 end
 
 local function check_ccmanager()
-  local handle = io.popen("which ccmanager 2>/dev/null || which npx 2>/dev/null")
-  if handle then
-    local result = handle:read("*a")
-    handle:close()
-    return result ~= ""
+  error_handler.debug("Checking for ccmanager command", "Dependencies")
+  local result, err = error_handler.safe_execute("which ccmanager 2>/dev/null || which npx 2>/dev/null", nil, "Dependencies")
+  if not result then
+    error_handler.debug("ccmanager check failed: " .. tostring(err), "Dependencies")
+    return false
   end
-  return false
+  return result:gsub("%s+", "") ~= ""
 end
 
 local function validate_dependencies()
   if not check_nodejs() then
-    vim.notify("CCManager: Node.js is not installed. Please install Node.js first.", vim.log.levels.ERROR)
+    error_handler.error("Node.js is not installed. Please install Node.js first.", "Dependencies")
     return false
   end
   
   if not check_ccmanager() then
-    vim.notify("CCManager: 'ccmanager' command not found. Please install it with 'npm install -g ccmanager'", vim.log.levels.ERROR)
+    error_handler.error("'ccmanager' command not found. Please install it with 'npm install -g ccmanager'", "Dependencies")
     return false
   end
   
+  error_handler.debug("All dependencies validated successfully", "Dependencies")
   return true
 end
 
@@ -43,22 +45,35 @@ function M.setup(config)
     size = 0.3,
     position = "bottom"
   }
+  -- デバッグモードの設定
+  if M.config.debug then
+    error_handler.set_debug(true)
+  end
 end
 
 function M.toggle()
+  error_handler.debug("Toggling CCManager terminal", "Terminal")
+  
   if not validate_dependencies() then
     return
   end
   
-  local ok, toggleterm = pcall(require, "toggleterm")
-  if not ok then
-    vim.notify("CCManager: toggleterm.nvim is required", vim.log.levels.ERROR)
+  local toggleterm, err = error_handler.safe_require("toggleterm", "toggleterm.nvim is required. Please install it.", "Terminal")
+  if not toggleterm then
     return
   end
   
   if not terminal then
-    local Terminal = require("toggleterm.terminal").Terminal
-    terminal = Terminal:new({
+    error_handler.debug("Creating new terminal instance", "Terminal")
+    
+    local terminal_module = error_handler.safe_require("toggleterm.terminal", "Failed to load toggleterm.terminal module", "Terminal")
+    if not terminal_module then
+      return
+    end
+    
+    local Terminal = terminal_module.Terminal
+    local create_terminal = function()
+      return Terminal:new({
       cmd = M.config.command,
       dir = vim.fn.getcwd(),
       direction = (M.config.window.position == "right" or M.config.window.position == "left") and "vertical" or M.config.window.position,
@@ -77,18 +92,35 @@ function M.toggle()
       persist_size = false,  -- サイズの再計算を許可
       close_on_exit = true,
       hidden = false,
+      on_exit = function(term, job, exit_code)
+        -- プロセスの終了を監視
+        if exit_code ~= 0 then
+          error_handler.error(string.format("CCManager process exited with code %d", exit_code), "Process")
+          -- 異常終了時はターミナルインスタンスをリセット
+          terminal = nil
+        else
+          error_handler.debug("CCManager process exited normally", "Process")
+        end
+      end,
       on_open = function(term)
         -- 垂直分割の場合、ウィンドウサイズを明示的に設定
         if term.direction == "vertical" then
           local expected_width = math.max(math.floor(vim.o.columns * M.config.window.size), 30)
-          vim.api.nvim_win_set_width(0, expected_width)
+          error_handler.safe_api_call(function()
+            vim.api.nvim_win_set_width(0, expected_width)
+          end, "Failed to set window width", "Terminal")
         end
         
         -- WSL2環境での最適化
         if M.config.wsl_optimization and M.config.wsl_optimization.enabled and utils.is_wsl() then
           -- クリップボード設定をチェック
-          if M.config.wsl_optimization.check_clipboard and not utils.check_clipboard_config() then
-            vim.notify("CCManager: WSL2 clipboard not configured. See README.", vim.log.levels.WARN)
+          if M.config.wsl_optimization.check_clipboard then
+            local clipboard_ok, clipboard_result = pcall(utils.check_clipboard_config)
+            if clipboard_ok and not clipboard_result then
+              error_handler.warn("WSL2 clipboard not configured. See README for setup instructions.", "WSL2")
+            elseif not clipboard_ok then
+              error_handler.debug("Failed to check clipboard config: " .. tostring(clipboard_result), "WSL2")
+            end
           end
           
           -- ペースト問題の修正
@@ -118,12 +150,16 @@ function M.toggle()
         if M.config.terminal_keymaps and M.config.terminal_keymaps.paste then
           -- ターミナルモードでの直接ペースト処理
           vim.keymap.set("t", M.config.terminal_keymaps.paste, function()
-            local clipboard_content = vim.fn.getreg("+")
+            local ok, clipboard_content = pcall(vim.fn.getreg, "+")
+            if not ok then
+              error_handler.error("Failed to access clipboard: " .. tostring(clipboard_content), "Clipboard")
+              return
+            end
             if clipboard_content and clipboard_content ~= "" then
               -- WSL2環境での大量テキストペースト対策
-              if utils.is_wsl() and #clipboard_content > 100 then
+              if utils.is_wsl() and #clipboard_content > 15 then
                 -- 大きなテキストは分割してペースト
-                local chunk_size = 50
+                local chunk_size = 3
                 local chunks = {}
                 for i = 1, #clipboard_content, chunk_size do
                   table.insert(chunks, clipboard_content:sub(i, i + chunk_size - 1))
@@ -132,25 +168,92 @@ function M.toggle()
                 -- 各チャンクを順番にペースト
                 for i, chunk in ipairs(chunks) do
                   local escaped = vim.api.nvim_replace_termcodes(chunk, true, false, true)
-                  vim.api.nvim_feedkeys(escaped, "n", false)
+                  local feed_ok = error_handler.safe_api_call(function()
+                    vim.api.nvim_feedkeys(escaped, "n", false)
+                  end, "Failed to paste chunk " .. i, "Clipboard")
+                  
+                  if not feed_ok then
+                    break
+                  end
+                  
                   -- 小さな遅延を入れて処理を安定化
                   if i < #chunks then
-                    vim.cmd("sleep 1m")
+                    vim.cmd("sleep 0.5m")
                   end
                 end
               else
                 -- 通常のペースト処理
                 local escaped = vim.api.nvim_replace_termcodes(clipboard_content, true, false, true)
-                vim.api.nvim_feedkeys(escaped, "n", false)
+                error_handler.safe_api_call(function()
+                  vim.api.nvim_feedkeys(escaped, "n", false)
+                end, "Failed to paste clipboard content", "Clipboard")
               end
             end
           end, { buffer = term.bufnr, desc = "Paste from clipboard" })
         end
       end,
+      })
+    end
+    
+    -- リトライ機能付きでターミナルを作成
+    local created_terminal = error_handler.retry(create_terminal, {
+      max_attempts = 3,
+      delay = 100,
+      context = "Terminal",
+      error_msg = "Failed to create terminal after multiple attempts"
     })
+    
+    if created_terminal then
+      terminal = created_terminal
+      error_handler.info("CCManager terminal created successfully", "Terminal")
+    else
+      return
+    end
   end
   
-  terminal:toggle()
+  -- ターミナルのトグル処理もエラーハンドリング
+  local toggle_ok = error_handler.safe_api_call(function()
+    terminal:toggle()
+  end, "Failed to toggle terminal", "Terminal")
+  
+  if not toggle_ok then
+    -- トグルに失敗した場合、ターミナルインスタンスをリセット
+    terminal = nil
+    error_handler.error("Terminal toggle failed. Please try again.", "Terminal")
+  end
+end
+
+-- ターミナルインスタンスの状態を取得
+function M.get_status()
+  if not terminal then
+    return "not_created"
+  elseif terminal:is_open() then
+    return "open"
+  else
+    return "closed"
+  end
+end
+
+-- CCManagerプロセスを強制終了
+function M.kill()
+  if terminal then
+    error_handler.info("Killing CCManager process", "Terminal")
+    terminal:shutdown()
+    terminal = nil
+  else
+    error_handler.warn("No active CCManager terminal to kill", "Terminal")
+  end
+end
+
+-- ターミナルインスタンスをリセット
+function M.reset()
+  if terminal then
+    if terminal:is_open() then
+      terminal:close()
+    end
+    terminal = nil
+    error_handler.info("CCManager terminal reset", "Terminal")
+  end
 end
 
 return M
