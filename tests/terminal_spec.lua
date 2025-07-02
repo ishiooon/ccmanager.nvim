@@ -701,7 +701,7 @@ describe("ccmanager.terminal", function()
       end
       
       -- 大量のテキストを生成（150文字）
-      local large_text = string.rep("abcdefghij", 15)  -- 150文字
+      local large_text = string.rep("abcdefghij", 15)  -- 150文字（30文字ずつ5チャンクに分割される）
       
       -- vim.fn.getregのモック
       local original_getreg = vim.fn.getreg
@@ -710,6 +710,15 @@ describe("ccmanager.terminal", function()
           return large_text
         end
         return original_getreg(reg)
+      end
+      
+      -- vim.fn.systemのモック（WSL2でのクリップボード取得）
+      local original_system = vim.fn.system
+      vim.fn.system = function(cmd)
+        if cmd:match("powershell.exe") then
+          return large_text
+        end
+        return original_system(cmd)
       end
       
       -- vim.api.nvim_replace_termcodesのモック
@@ -725,12 +734,17 @@ describe("ccmanager.terminal", function()
         table.insert(feedkeys_calls, keys)
       end
       
-      -- vim.cmdのモック（sleepコマンドを記録）
+      -- vim.cmdのモック（sleepとredrawコマンドを記録）
       local sleep_count = 0
+      local redraw_count = 0
       local original_cmd = vim.cmd
       vim.cmd = function(cmd)
-        if type(cmd) == "string" and cmd:match("sleep") then
-          sleep_count = sleep_count + 1
+        if type(cmd) == "string" then
+          if cmd:match("sleep") then
+            sleep_count = sleep_count + 1
+          elseif cmd:match("redraw") then
+            redraw_count = redraw_count + 1
+          end
         end
       end
       
@@ -776,6 +790,7 @@ describe("ccmanager.terminal", function()
       -- モックを元に戻す
       vim.keymap.set = original_keymap_set
       vim.fn.getreg = original_getreg
+      vim.fn.system = original_system
       vim.api.nvim_replace_termcodes = original_replace_termcodes
       vim.api.nvim_feedkeys = original_feedkeys
       vim.cmd = original_cmd
@@ -783,8 +798,9 @@ describe("ccmanager.terminal", function()
       
       -- アサーション
       assert.is_true(#feedkeys_calls > 1, "Should be split into multiple chunks")
-      assert.are.equal(3, #feedkeys_calls, "150 chars should be split into 3 chunks of 50")
-      assert.are.equal(2, sleep_count, "Should have 2 sleep calls between chunks")
+      assert.are.equal(5, #feedkeys_calls, "150 chars should be split into 5 chunks of 30")
+      assert.are.equal(4, sleep_count, "Should have 4 sleep calls between chunks")
+      assert.are.equal(4, redraw_count, "Should have 4 redraw calls between chunks")
       
       -- 分割されたテキストを結合して元のテキストと一致するか確認
       local combined = table.concat(feedkeys_calls, "")
