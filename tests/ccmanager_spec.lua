@@ -26,6 +26,7 @@ describe("ccmanager", function()
     package.loaded["ccmanager.init"] = nil
     package.loaded["ccmanager.terminal"] = nil
     package.loaded["ccmanager.utils"] = nil
+    package.loaded["ccmanager.state"] = nil
     
     ccmanager = require("ccmanager")
   end)
@@ -91,6 +92,36 @@ describe("ccmanager", function()
       
       vim.keymap.set = original_keymap_set
       assert.is_true(keymap_called)
+    end)
+    
+    it("状態管理オプションが設定される", function()
+      ccmanager.setup({
+        terminal_per_buffer = true,
+        terminal_per_dir = false,
+        cleanup_timeout = 60000,
+      })
+      
+      assert.is_true(ccmanager.config.terminal_per_buffer)
+      assert.is_false(ccmanager.config.terminal_per_dir)
+      assert.equals(60000, ccmanager.config.cleanup_timeout)
+    end)
+    
+    it("状態管理コマンドが登録される", function()
+      local commands = {}
+      local original_create_command = vim.api.nvim_create_user_command
+      vim.api.nvim_create_user_command = function(name, callback, opts)
+        commands[name] = { callback = callback, opts = opts }
+      end
+      
+      ccmanager.setup()
+      
+      vim.api.nvim_create_user_command = original_create_command
+      
+      -- コマンドが登録されている
+      assert.is_not_nil(commands["CCManagerShowState"])
+      assert.is_not_nil(commands["CCManagerDestroy"])
+      assert.is_not_nil(commands["CCManagerDestroyAll"])
+      assert.is_not_nil(commands["CCManagerReset"])
     end)
   end)
 end)
