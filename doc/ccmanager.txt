@@ -1,83 +1,266 @@
-*ccmanager.txt*  Neovim plugin for CCManager / CCManager用Neovimプラグイン
+*ccmanager.txt*  Claude Code Session Manager integration for Neovim
 
-==============================================================================
+Author:  ishiooon
+License: MIT
+
 CONTENTS                                                    *ccmanager-contents*
 
-1. Introduction ............................................. |ccmanager-intro|
-2. Setup .................................................... |ccmanager-setup|
-3. Configuration ........................................ |ccmanager-config|
-4. Commands ............................................. |ccmanager-commands|
-5. Mappings ............................................. |ccmanager-mappings|
+1. Introduction ........................... |ccmanager-introduction|
+2. Requirements ........................... |ccmanager-requirements|
+3. Installation ........................... |ccmanager-installation|
+4. Configuration .......................... |ccmanager-configuration|
+5. Usage .................................. |ccmanager-usage|
+6. Commands ............................... |ccmanager-commands|
+7. Functions .............................. |ccmanager-functions|
+8. Troubleshooting ........................ |ccmanager-troubleshooting|
+9. FAQ .................................... |ccmanager-faq|
 
 ==============================================================================
-INTRODUCTION                                                   *ccmanager-intro*
+1. INTRODUCTION                                         *ccmanager-introduction*
 
-CCManager.nvim is a Neovim plugin that integrates CCManager (Claude Code Session
-Manager) into your editor using toggleterm.nvim. CCManager is a TUI application
-for managing multiple Claude Code sessions across Git worktrees. This plugin
-allows you to easily access CCManager from within Neovim.
+ccmanager.nvim is a Neovim plugin that integrates CCManager (Claude Code
+Session Manager) into your editor. CCManager is a TUI application for managing
+multiple Claude Code sessions across Git worktrees.
 
-CCManager.nvimは、toggleterm.nvimを使用してCCManager（Claude Codeセッション
-マネージャー）をエディタに統合するNeovimプラグインです。CCManagerは、複数の
-Claude CodeセッションをGitワークツリー間で管理するためのTUIアプリケーション
-です。このプラグインにより、Neovim内から簡単にCCManagerにアクセスできます。
+Features:
+- Quick access with customizable keymaps
+- Flexible window positioning (split, float)
+- WSL2 optimizations
+- Zero configuration with sensible defaults
 
 ==============================================================================
-SETUP                                                          *ccmanager-setup*
+2. REQUIREMENTS                                         *ccmanager-requirements*
 
-To use CCManager.nvim, you need to have toggleterm.nvim installed.
+- Neovim >= 0.11.0
+- Node.js >= 16.0.0
+- Git (for worktree management)
+- toggleterm.nvim (https://github.com/akinsho/toggleterm.nvim)
+- CCManager (install with: npm install -g ccmanager)
 
-CCManager.nvimを使用するには、toggleterm.nvimがインストールされている必要があります。
+==============================================================================
+3. INSTALLATION                                         *ccmanager-installation*
 
 Using lazy.nvim: >lua
   {
-    "your-username/ccmanager.nvim",
-    dependencies = { "akinsho/toggleterm.nvim" },
+    "ishiooon/ccmanager.nvim",
+    dependencies = {
+      "akinsho/toggleterm.nvim",
+      version = "*",
+      config = true
+    },
     config = function()
-      require("ccmanager").setup()
+      require("ccmanager").setup({
+        -- your configuration
+      })
     end,
   }
 <
 
-==============================================================================
-CONFIGURATION                                                 *ccmanager-config*
+Using packer.nvim: >lua
+  use {
+    'ishiooon/ccmanager.nvim',
+    requires = {'akinsho/toggleterm.nvim'},
+    config = function()
+      require("ccmanager").setup()
+    end
+  }
+<
 
-Call the setup function with your configuration:
-セットアップ関数を設定と共に呼び出します：
->lua
+==============================================================================
+4. CONFIGURATION                                       *ccmanager-configuration*
+
+Default configuration: >lua
   require("ccmanager").setup({
-    keymap = "<leader>cm",           -- Default keymap to toggle CCManager / CCManagerをトグルするデフォルトキーマップ
+    keymap = "<leader>cm",           -- Keymap to toggle CCManager
     window = {
-      size = 0.3,                    -- Window size (0-1 for percentage) / ウィンドウサイズ（0-1でパーセンテージ指定）
-      position = "right",            -- Window position: "right", "left", "bottom", "top" / ウィンドウ位置
+      size = 0.3,                    -- Window size (0-1 for percentage)
+      position = "right",            -- Window position
     },
-    command = "npx ccmanager",       -- Command to run CCManager / CCManagerを実行するコマンド
+    command = "npx ccmanager",       -- Command to run CCManager
+    terminal_keymaps = {
+      normal_mode = "<C-q>",         -- Exit terminal mode
+      window_nav = "<C-w>",          -- Window navigation
+      paste = "<C-S-v>",             -- Paste in terminal
+    },
+    wsl_optimization = {
+      enabled = true,                -- Enable WSL2 optimizations
+      check_clipboard = true,        -- Check clipboard config
+      fix_paste = true,              -- Apply paste fixes
+    },
+  })
+<
+
+Configuration options:
+
+*ccmanager-config.keymap*
+    Type: `string|nil`
+    Default: `"<leader>cm"`
+    
+    Keymap to toggle CCManager. Set to `nil` to disable automatic keymap.
+
+*ccmanager-config.window.size*
+    Type: `number|function`
+    Default: `0.3`
+    
+    Window size as a fraction (0-1). Can be a function returning a number.
+
+*ccmanager-config.window.position*
+    Type: `string`
+    Default: `"right"`
+    
+    Window position. Valid values:
+    - "right": Right side split
+    - "left": Left side split
+    - "top": Top split
+    - "bottom": Bottom split
+    - "float": Floating window
+
+*ccmanager-config.command*
+    Type: `string`
+    Default: `"npx ccmanager"`
+    
+    Command to run CCManager. Examples:
+    - "ccmanager" (if globally installed)
+    - "npx ccmanager" (use without installation)
+    - "ccmanager --config ~/.config/ccmanager/config.json"
+
+*ccmanager-config.terminal_keymaps*
+    Type: `table`
+    
+    Keymaps for terminal mode:
+    - normal_mode: Exit to normal mode (default: "<C-q>")
+    - window_nav: Window navigation (default: "<C-w>")
+    - paste: Paste from clipboard (default: "<C-S-v>")
+
+*ccmanager-config.wsl_optimization*
+    Type: `table`
+    
+    WSL2-specific optimizations:
+    - enabled: Enable WSL2 optimizations (default: true)
+    - check_clipboard: Check clipboard configuration (default: true)
+    - fix_paste: Apply paste issue fixes (default: true)
+
+==============================================================================
+5. USAGE                                                     *ccmanager-usage*
+
+Basic usage:
+1. Press `<leader>cm` (default) to open CCManager
+2. Use CCManager's interface to manage sessions
+3. Press `<leader>cm` again to close
+
+Terminal mode keymaps:
+- `<C-q>`: Exit terminal mode to normal mode
+- `<C-w>`: Window navigation from terminal mode
+- `<Esc>`: Passed through to CCManager for TUI operations
+
+Custom keymaps: >lua
+  -- Disable automatic keymap
+  require("ccmanager").setup({ keymap = nil })
+  
+  -- Set custom keymaps
+  vim.keymap.set("n", "<leader>cc", function()
+    require("ccmanager.terminal").toggle()
+  end, { desc = "Toggle CCManager" })
+<
+
+==============================================================================
+6. COMMANDS                                               *ccmanager-commands*
+
+The plugin provides the following commands:
+
+*:CCManagerToggle*
+    Toggle the CCManager terminal window.
+    This command is automatically created if a keymap is configured.
+
+==============================================================================
+7. FUNCTIONS                                             *ccmanager-functions*
+
+*ccmanager.setup({opts})*
+    Initialize ccmanager.nvim with the given configuration.
+    
+    Parameters: ~
+        {opts}  (table|nil) Configuration options
+
+*ccmanager.terminal.toggle()*
+    Toggle the CCManager terminal window.
+    
+    Example: >lua
+        require("ccmanager.terminal").toggle()
+<
+
+*ccmanager.terminal.reset()*
+    Reset the terminal instance. Useful when CCManager gets stuck or when
+    you want to restart with a fresh instance.
+    
+    Example: >lua
+        require("ccmanager.terminal").reset()
+<
+
+==============================================================================
+8. TROUBLESHOOTING                                  *ccmanager-troubleshooting*
+
+CCManager won't start~
+
+1. Check Node.js installation:
+   :!node --version
+
+2. Verify CCManager installation:
+   :!which ccmanager
+
+3. Check plugin messages:
+   :messages
+
+Terminal window size issues~
+
+If the window is too small, adjust the size configuration: >lua
+  require("ccmanager").setup({
+    window = {
+      size = 0.5,  -- 50% of screen
+    },
+  })
+<
+
+WSL2 paste issues~
+
+If you experience character loss when pasting in WSL2:
+
+1. Configure clipboard: >lua
+  vim.g.clipboard = {
+    name = 'WslClipboard',
+    copy = {
+      ['+'] = 'clip.exe',
+      ['*'] = 'clip.exe',
+    },
+    paste = {
+      ['+'] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
+      ['*'] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
+    },
+    cache_enabled = 0,
+  }
+<
+
+2. Or disable WSL2 optimizations: >lua
+  require("ccmanager").setup({
+    wsl_optimization = {
+      enabled = false,
+    },
   })
 <
 
 ==============================================================================
-COMMANDS                                                    *ccmanager-commands*
+9. FAQ                                                         *ccmanager-faq*
 
-Currently, CCManager.nvim does not provide any commands. Use the keymap to
-toggle the CCManager terminal.
+Q: Can I use ccmanager.nvim with other terminal plugins?
+A: Yes, ccmanager.nvim uses toggleterm.nvim which coexists well with other
+   plugins. Each terminal instance is isolated.
 
-現在、CCManager.nvimはコマンドを提供していません。キーマップを使用して
-CCManagerターミナルをトグルしてください。
+Q: How do I use CCManager with multiple projects?
+A: CCManager automatically detects Git worktrees. Simply open Neovim in
+   different worktree directories.
 
-==============================================================================
-MAPPINGS                                                    *ccmanager-mappings*
-
-*<leader>cm*
-    Toggle CCManager terminal window (default mapping)
-    CCManagerターミナルウィンドウをトグル（デフォルトマッピング）
-
-In terminal mode / ターミナルモードで:
-*<Esc>*
-    Exit terminal mode to normal mode
-    ターミナルモードから通常モードへ抜ける
-*<C-w>*
-    Window navigation from terminal mode
-    ターミナルモードからウィンドウナビゲーション
+Q: The plugin doesn't work in my terminal
+A: Ensure your terminal supports 256 colors and Unicode. Recommended
+   terminals: Alacritty, Kitty, iTerm2, Windows Terminal.
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:
