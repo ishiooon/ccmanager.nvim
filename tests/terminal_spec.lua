@@ -508,5 +508,287 @@ describe("ccmanager.terminal", function()
       assert.is_true(t_be_disabled, "t_BE should be disabled")
       assert.is_true(opt_local_set, "ttimeoutlen should be set to 0")
     end)
+    
+    it("WSL2環境でペーストキーマッピングが設定される", function()
+      -- utilsモジュールのモック
+      package.loaded["ccmanager.utils"] = {
+        is_wsl = function() return true end,
+        check_clipboard_config = function() return true end
+      }
+      
+      -- キーマップ設定を記録
+      local paste_keymap_set = false
+      local paste_function = nil
+      
+      -- vim.keymap.setのモック
+      local original_keymap_set = vim.keymap.set
+      vim.keymap.set = function(mode, lhs, rhs, opts)
+        if mode == "t" and lhs == "<C-S-v>" then
+          paste_keymap_set = true
+          paste_function = rhs
+        end
+      end
+      
+      -- vim.cmdのモック
+      local original_cmd = vim.cmd
+      vim.cmd = function(cmd) end
+      
+      -- vim.opt_localのモック
+      local original_opt_local = vim.opt_local
+      vim.opt_local = setmetatable({}, {
+        __newindex = function(t, k, v) end
+      })
+      
+      -- vim.fn.hasのモック
+      local original_has = vim.fn.has
+      vim.fn.has = function(feature)
+        if feature == 'nvim-0.8' then
+          return 1
+        end
+        return original_has(feature)
+      end
+      
+      -- toggletermモジュールのモック
+      package.loaded["toggleterm"] = {}
+      package.loaded["toggleterm.terminal"] = {
+        Terminal = {
+          new = function(self, opts)
+            local term_mock = { bufnr = 123, direction = "horizontal" }
+            opts.on_open(term_mock)
+            return { toggle = function() end }
+          end
+        }
+      }
+      
+      -- terminalモジュールをリロード
+      package.loaded["ccmanager.terminal"] = nil
+      terminal = require("ccmanager.terminal")
+      
+      terminal.setup({
+        command = "test",
+        window = { size = 0.3, position = "bottom" },
+        terminal_keymaps = {
+          paste = "<C-S-v>"
+        },
+        wsl_optimization = {
+          enabled = true,
+          fix_paste = true
+        }
+      })
+      terminal.toggle()
+      
+      -- モックを元に戻す
+      vim.keymap.set = original_keymap_set
+      vim.cmd = original_cmd
+      vim.opt_local = original_opt_local
+      vim.fn.has = original_has
+      
+      -- アサーション
+      assert.is_true(paste_keymap_set, "Paste keymap should be set")
+      assert.is_function(paste_function, "Paste function should be a function")
+    end)
+    
+    it("ペースト機能が正しく動作する", function()
+      -- utilsモジュールのモック
+      package.loaded["ccmanager.utils"] = {
+        is_wsl = function() return false end,  -- 通常環境でテスト
+        check_clipboard_config = function() return true end
+      }
+      
+      -- ペースト関数を保存
+      local paste_function = nil
+      
+      -- vim.keymap.setのモック
+      local original_keymap_set = vim.keymap.set
+      vim.keymap.set = function(mode, lhs, rhs, opts)
+        if mode == "t" and lhs == "<C-S-v>" then
+          paste_function = rhs
+        end
+      end
+      
+      -- vim.fn.getregのモック（クリップボードの内容）
+      local original_getreg = vim.fn.getreg
+      vim.fn.getreg = function(reg)
+        if reg == "+" then
+          return "test clipboard content"
+        end
+        return original_getreg(reg)
+      end
+      
+      -- vim.api.nvim_replace_termcodesのモック
+      local original_replace_termcodes = vim.api.nvim_replace_termcodes
+      vim.api.nvim_replace_termcodes = function(str, from_part, do_lt, special)
+        return str  -- そのまま返す
+      end
+      
+      -- vim.api.nvim_feedkeysのモック
+      local feedkeys_called = false
+      local feedkeys_content = nil
+      local original_feedkeys = vim.api.nvim_feedkeys
+      vim.api.nvim_feedkeys = function(keys, mode, escape_csi)
+        feedkeys_called = true
+        feedkeys_content = keys
+      end
+      
+      -- その他のモック
+      local original_cmd = vim.cmd
+      vim.cmd = function(cmd) end
+      
+      local original_opt_local = vim.opt_local
+      vim.opt_local = setmetatable({}, {
+        __newindex = function(t, k, v) end
+      })
+      
+      -- toggletermモジュールのモック
+      package.loaded["toggleterm"] = {}
+      package.loaded["toggleterm.terminal"] = {
+        Terminal = {
+          new = function(self, opts)
+            local term_mock = { bufnr = 123, direction = "horizontal" }
+            opts.on_open(term_mock)
+            return { toggle = function() end }
+          end
+        }
+      }
+      
+      -- terminalモジュールをリロード
+      package.loaded["ccmanager.terminal"] = nil
+      terminal = require("ccmanager.terminal")
+      
+      terminal.setup({
+        command = "test",
+        window = { size = 0.3, position = "bottom" },
+        terminal_keymaps = {
+          paste = "<C-S-v>"
+        }
+      })
+      terminal.toggle()
+      
+      -- ペースト関数を実行
+      if paste_function then
+        paste_function()
+      end
+      
+      -- モックを元に戻す
+      vim.keymap.set = original_keymap_set
+      vim.fn.getreg = original_getreg
+      vim.api.nvim_replace_termcodes = original_replace_termcodes
+      vim.api.nvim_feedkeys = original_feedkeys
+      vim.cmd = original_cmd
+      vim.opt_local = original_opt_local
+      
+      -- アサーション
+      assert.is_true(feedkeys_called, "nvim_feedkeys should be called")
+      assert.are.equal("test clipboard content", feedkeys_content, "Clipboard content should be pasted")
+    end)
+    
+    it("WSL2環境で大量テキストが分割してペーストされる", function()
+      -- utilsモジュールのモック
+      package.loaded["ccmanager.utils"] = {
+        is_wsl = function() return true end,  -- WSL2環境
+        check_clipboard_config = function() return true end
+      }
+      
+      -- ペースト関数を保存
+      local paste_function = nil
+      
+      -- vim.keymap.setのモック
+      local original_keymap_set = vim.keymap.set
+      vim.keymap.set = function(mode, lhs, rhs, opts)
+        if mode == "t" and lhs == "<C-S-v>" then
+          paste_function = rhs
+        end
+      end
+      
+      -- 大量のテキストを生成（150文字）
+      local large_text = string.rep("abcdefghij", 15)  -- 150文字
+      
+      -- vim.fn.getregのモック
+      local original_getreg = vim.fn.getreg
+      vim.fn.getreg = function(reg)
+        if reg == "+" then
+          return large_text
+        end
+        return original_getreg(reg)
+      end
+      
+      -- vim.api.nvim_replace_termcodesのモック
+      local original_replace_termcodes = vim.api.nvim_replace_termcodes
+      vim.api.nvim_replace_termcodes = function(str, from_part, do_lt, special)
+        return str
+      end
+      
+      -- vim.api.nvim_feedkeysのモック
+      local feedkeys_calls = {}
+      local original_feedkeys = vim.api.nvim_feedkeys
+      vim.api.nvim_feedkeys = function(keys, mode, escape_csi)
+        table.insert(feedkeys_calls, keys)
+      end
+      
+      -- vim.cmdのモック（sleepコマンドを記録）
+      local sleep_count = 0
+      local original_cmd = vim.cmd
+      vim.cmd = function(cmd)
+        if type(cmd) == "string" and cmd:match("sleep") then
+          sleep_count = sleep_count + 1
+        end
+      end
+      
+      -- その他のモック
+      local original_opt_local = vim.opt_local
+      vim.opt_local = setmetatable({}, {
+        __newindex = function(t, k, v) end
+      })
+      
+      -- toggletermモジュールのモック
+      package.loaded["toggleterm"] = {}
+      package.loaded["toggleterm.terminal"] = {
+        Terminal = {
+          new = function(self, opts)
+            local term_mock = { bufnr = 123, direction = "horizontal" }
+            opts.on_open(term_mock)
+            return { toggle = function() end }
+          end
+        }
+      }
+      
+      -- terminalモジュールをリロード
+      package.loaded["ccmanager.terminal"] = nil
+      terminal = require("ccmanager.terminal")
+      
+      terminal.setup({
+        command = "test",
+        window = { size = 0.3, position = "bottom" },
+        terminal_keymaps = {
+          paste = "<C-S-v>"
+        },
+        wsl_optimization = {
+          enabled = true
+        }
+      })
+      terminal.toggle()
+      
+      -- ペースト関数を実行
+      if paste_function then
+        paste_function()
+      end
+      
+      -- モックを元に戻す
+      vim.keymap.set = original_keymap_set
+      vim.fn.getreg = original_getreg
+      vim.api.nvim_replace_termcodes = original_replace_termcodes
+      vim.api.nvim_feedkeys = original_feedkeys
+      vim.cmd = original_cmd
+      vim.opt_local = original_opt_local
+      
+      -- アサーション
+      assert.is_true(#feedkeys_calls > 1, "Should be split into multiple chunks")
+      assert.are.equal(3, #feedkeys_calls, "150 chars should be split into 3 chunks of 50")
+      assert.are.equal(2, sleep_count, "Should have 2 sleep calls between chunks")
+      
+      -- 分割されたテキストを結合して元のテキストと一致するか確認
+      local combined = table.concat(feedkeys_calls, "")
+      assert.are.equal(large_text, combined, "Combined chunks should equal original text")
+    end)
   end)
 end)

@@ -88,7 +88,7 @@ function M.toggle()
         if M.config.wsl_optimization and M.config.wsl_optimization.enabled and utils.is_wsl() then
           -- クリップボード設定をチェック
           if M.config.wsl_optimization.check_clipboard and not utils.check_clipboard_config() then
-            vim.notify("CCManager: WSL2環境でクリップボード設定が最適化されていません。READMEを参照してください。", vim.log.levels.WARN)
+            vim.notify("CCManager: WSL2 clipboard not configured. See README.", vim.log.levels.WARN)
           end
           
           -- ペースト問題の修正
@@ -116,7 +116,35 @@ function M.toggle()
         end
         -- ペースト用のキーマッピング（WSL2環境で有用）
         if M.config.terminal_keymaps and M.config.terminal_keymaps.paste then
-          vim.keymap.set("t", M.config.terminal_keymaps.paste, [[<C-\><C-n>"+pi]], { buffer = term.bufnr, desc = "Paste from clipboard" })
+          -- ターミナルモードでの直接ペースト処理
+          vim.keymap.set("t", M.config.terminal_keymaps.paste, function()
+            local clipboard_content = vim.fn.getreg("+")
+            if clipboard_content and clipboard_content ~= "" then
+              -- WSL2環境での大量テキストペースト対策
+              if utils.is_wsl() and #clipboard_content > 100 then
+                -- 大きなテキストは分割してペースト
+                local chunk_size = 50
+                local chunks = {}
+                for i = 1, #clipboard_content, chunk_size do
+                  table.insert(chunks, clipboard_content:sub(i, i + chunk_size - 1))
+                end
+                
+                -- 各チャンクを順番にペースト
+                for i, chunk in ipairs(chunks) do
+                  local escaped = vim.api.nvim_replace_termcodes(chunk, true, false, true)
+                  vim.api.nvim_feedkeys(escaped, "n", false)
+                  -- 小さな遅延を入れて処理を安定化
+                  if i < #chunks then
+                    vim.cmd("sleep 1m")
+                  end
+                end
+              else
+                -- 通常のペースト処理
+                local escaped = vim.api.nvim_replace_termcodes(clipboard_content, true, false, true)
+                vim.api.nvim_feedkeys(escaped, "n", false)
+              end
+            end
+          end, { buffer = term.bufnr, desc = "Paste from clipboard" })
         end
       end,
     })
