@@ -95,8 +95,13 @@ function M.toggle()
           if M.config.wsl_optimization.fix_paste then
             -- Bracketed Paste Modeを無効化
             vim.cmd("set t_BE=")
-            -- ターミナルバッファでpaste設定を調整
-            vim.bo[term.bufnr].paste = false
+            -- ターミナルモードではpaste設定は使用できない
+            -- また、modifiableはターミナルバッファでは常にtrueなので設定不要
+            -- 代わりに、ターミナル固有のペースト問題を回避するための設定
+            if vim.fn.has('nvim-0.8') == 1 then
+              -- Neovim 0.8以降: ターミナルのペースト遅延を無効化
+              vim.opt_local.ttimeoutlen = 0
+            end
           end
         end
         

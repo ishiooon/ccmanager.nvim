@@ -401,4 +401,112 @@ describe("ccmanager.terminal", function()
       assert.are.equal(123, keymaps_set[2].opts.buffer)
     end)
   end)
+  
+  describe("WSL2環境での最適化", function()
+    local original_popen
+    
+    before_each(function()
+      -- io.popenのモック（依存関係はOK）
+      original_popen = io.popen
+      io.popen = function(cmd)
+        if cmd:match("which node") then
+          return {
+            read = function() return "/usr/bin/node" end,
+            close = function() end
+          }
+        elseif cmd:match("which ccmanager") or cmd:match("which npx") then
+          return {
+            read = function() return "/usr/bin/npx" end,
+            close = function() end
+          }
+        end
+        return original_popen(cmd)
+      end
+    end)
+    
+    after_each(function()
+      io.popen = original_popen
+    end)
+    
+    it("WSL2環境でペースト修正が適用される", function()
+      -- utilsモジュールのモック
+      package.loaded["ccmanager.utils"] = {
+        is_wsl = function() return true end,
+        check_clipboard_config = function() return true end
+      }
+      
+      -- on_open関数の実行を確認するためのフラグ
+      local on_open_called = false
+      local t_be_disabled = false
+      local opt_local_set = false
+      
+      -- vim.cmdのモック
+      local original_cmd = vim.cmd
+      vim.cmd = function(cmd) 
+        if type(cmd) == "string" and cmd:match("set t_BE=") then
+          t_be_disabled = true
+        elseif type(cmd) == "string" and cmd:match("startinsert") then
+          -- startinsertも実行されることを確認
+          on_open_called = true
+        end
+      end
+      
+      -- vim.opt_localのモック
+      local original_opt_local = vim.opt_local
+      vim.opt_local = setmetatable({}, {
+        __newindex = function(t, k, v)
+          if k == "ttimeoutlen" and v == 0 then
+            opt_local_set = true
+          end
+        end
+      })
+      
+      -- vim.fn.hasのモック (Neovim 0.8以降として)
+      local original_has = vim.fn.has
+      vim.fn.has = function(feature)
+        if feature == 'nvim-0.8' then
+          return 1
+        end
+        return original_has(feature)
+      end
+      
+      -- toggletermモジュールのモック
+      package.loaded["toggleterm"] = {}
+      package.loaded["toggleterm.terminal"] = {
+        Terminal = {
+          new = function(self, opts)
+            -- on_open関数を手動で呼び出して設定を適用
+            local term_mock = { bufnr = 123, direction = "horizontal" }
+            opts.on_open(term_mock)
+            return { toggle = function() end }
+          end
+        }
+      }
+      
+      -- terinalモジュールをリロードして新しいモックを使用
+      package.loaded["ccmanager.terminal"] = nil
+      terminal = require("ccmanager.terminal")
+      
+      terminal.setup({
+        command = "test",
+        window = { size = 0.3, position = "bottom" },
+        wsl_optimization = {
+          enabled = true,
+          fix_paste = true,
+          check_clipboard = false
+        }
+      })
+      terminal.toggle()
+      
+      -- モックを元に戻す
+      vim.cmd = original_cmd
+      vim.opt_local = original_opt_local
+      vim.fn.has = original_has
+      
+      -- アサーション
+      assert.is_true(on_open_called, "on_open should be called")
+      assert.is_true(t_be_disabled, "t_BE should be disabled")
+      assert.is_true(opt_local_set, "ttimeoutlen should be set to 0")
+    end)
+  end)
 end)
