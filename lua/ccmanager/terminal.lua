@@ -1,6 +1,6 @@
 local M = {}
-local terminal = nil
 local utils = require("ccmanager.utils")
+local state = require("ccmanager.state")
 
 local function check_nodejs()
   local handle = io.popen("which node 2>/dev/null")
@@ -43,6 +43,14 @@ function M.setup(config)
     size = 0.3,
     position = "bottom"
   }
+  
+  -- 状態管理の設定
+  state.setup({
+    terminal_per_buffer = M.config.terminal_per_buffer,
+    terminal_per_dir = M.config.terminal_per_dir,
+    cleanup_timeout = M.config.cleanup_timeout,
+    debug = M.config.debug,
+  })
 end
 
 function M.toggle()
@@ -55,6 +63,9 @@ function M.toggle()
     vim.notify("CCManager: toggleterm.nvim is required", vim.log.levels.ERROR)
     return
   end
+  
+  -- 状態管理から現在のコンテキストのターミナルを取得
+  local terminal = state.get_terminal()
   
   if not terminal then
     local Terminal = require("toggleterm.terminal").Terminal
@@ -147,10 +158,66 @@ function M.toggle()
           end, { buffer = term.bufnr, desc = "Paste from clipboard" })
         end
       end,
+      on_exit = function(term, job, exit_code)
+        -- ターミナルが終了したら状態から削除
+        if exit_code == 0 then
+          state.destroy_terminal()
+        end
+      end,
     })
+    
+    -- 新しいターミナルを状態管理に登録
+    state.set_terminal(terminal)
   end
   
   terminal:toggle()
+end
+
+-- 現在のターミナルを取得
+function M.get_current()
+  return state.get_terminal()
+end
+
+-- 現在のターミナルを破棄
+function M.destroy_current()
+  state.destroy_terminal()
+end
+
+-- すべてのターミナルを破棄
+function M.destroy_all()
+  state.destroy_all_terminals()
+end
+
+-- 状態をリセット
+function M.reset()
+  state.reset()
+end
+
+-- デバッグ用: 現在の状態を表示
+function M.show_state()
+  local current_state = state.get_state()
+  local lines = {
+    "CCManager Terminal State:",
+    "========================",
+  }
+  
+  for context_id, info in pairs(current_state.terminals) do
+    table.insert(lines, string.format("Context: %s", context_id))
+    table.insert(lines, string.format("  Is Open: %s", tostring(info.is_open)))
+    table.insert(lines, string.format("  Has Instance: %s", tostring(info.has_instance)))
+    if current_state.last_used[context_id] then
+      local last_used = os.date("%Y-%m-%d %H:%M:%S", current_state.last_used[context_id] / 1000)
+      table.insert(lines, string.format("  Last Used: %s", last_used))
+    end
+    table.insert(lines, "")
+  end
+  
+  table.insert(lines, "Configuration:")
+  table.insert(lines, string.format("  Per Buffer: %s", tostring(current_state.config.terminal_per_buffer)))
+  table.insert(lines, string.format("  Per Directory: %s", tostring(current_state.config.terminal_per_dir)))
+  table.insert(lines, string.format("  Cleanup Timeout: %d ms", current_state.config.cleanup_timeout))
+  
+  vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO)
 end
 
 return M

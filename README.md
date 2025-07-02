@@ -146,6 +146,10 @@ require("ccmanager").setup({
     check_clipboard = true,        -- Check clipboard configuration
     fix_paste = true,              -- Apply paste issue fixes
   },
+  -- Terminal state management
+  terminal_per_buffer = false,     -- Create separate terminal per buffer
+  terminal_per_dir = false,        -- Create separate terminal per directory
+  cleanup_timeout = 1800000,       -- Cleanup unused terminals after 30 minutes (ms)
 })
 ```
 
@@ -235,6 +239,12 @@ Press `<leader>cm` (default) to toggle the CCManager terminal window.
 - `<C-w>` - Window navigation from terminal mode / ターミナルモードからのウィンドウ操作
 - `<Esc>` - Passed through to CCManager for TUI operations / CCManagerのTUI操作に使用
 
+### Commands / コマンド
+
+- `:CCManagerShowState` - Show terminal state information / ターミナル状態情報を表示
+- `:CCManagerDestroy` - Destroy current terminal / 現在のターミナルを破棄
+- `:CCManagerDestroyAll` - Destroy all terminals / すべてのターミナルを破棄
+- `:CCManagerReset` - Reset CCManager state / CCManagerの状態をリセット
 ## 🔧 Troubleshooting / トラブルシューティング
 
 ### Common Issues / よくある問題
@@ -278,6 +288,48 @@ require("ccmanager").setup({
   },
 })
 ```
+### Terminal State Management / ターミナル状態管理
+
+CCManager now provides advanced terminal lifecycle management:
+
+CCManagerは高度なターミナルライフサイクル管理を提供します：
+
+#### Terminal Contexts / ターミナルコンテキスト
+
+You can configure how terminals are created and managed:
+
+ターミナルの作成と管理方法を設定できます：
+
+- **Global** (default): Single terminal instance shared across all buffers / すべてのバッファで共有される単一のターミナル
+- **Per Buffer**: Separate terminal for each buffer / バッファごとに個別のターミナル
+- **Per Directory**: Separate terminal for each working directory / ディレクトリごとに個別のターミナル
+
+```lua
+require("ccmanager").setup({
+  terminal_per_buffer = true,  -- Each buffer gets its own terminal
+  -- OR
+  terminal_per_dir = true,     -- Each directory gets its own terminal
+})
+```
+
+#### Automatic Cleanup / 自動クリーンアップ
+
+Unused terminals are automatically cleaned up after the specified timeout:
+
+未使用のターミナルは指定したタイムアウト後に自動的にクリーンアップされます：
+
+```lua
+require("ccmanager").setup({
+  cleanup_timeout = 1800000,  -- 30 minutes in milliseconds
+})
+```
+
+#### Benefits / 利点
+
+- **Memory Efficiency**: Automatic cleanup prevents memory leaks / **メモリ効率**: 自動クリーンアップによりメモリリークを防止
+- **Multi-Project Support**: Work on multiple projects simultaneously / **マルチプロジェクト対応**: 複数のプロジェクトで同時に作業可能
+- **Session Compatibility**: Better integration with Neovim sessions / **セッション互換性**: Neovimセッションとの統合が向上
+- **Predictable Behavior**: Each context maintains its own state / **予測可能な動作**: 各コンテキストが独自の状態を維持
 
 ### WSL2 Paste Issues / WSL2でのペースト問題
 
