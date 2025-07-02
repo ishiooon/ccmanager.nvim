@@ -235,6 +235,10 @@ Press `<leader>cm` (default) to toggle the CCManager terminal window.
 - `<C-w>` - Window navigation from terminal mode / ターミナルモードからのウィンドウ操作
 - `<Esc>` - Passed through to CCManager for TUI operations / CCManagerのTUI操作に使用
 
+### Commands / コマンド
+
+- `:CCManagerShowConfig` - Display current configuration / 現在の設定を表示
+- `:CCManagerValidateConfig` - Validate current configuration / 現在の設定を検証
 ## 🔧 Troubleshooting / トラブルシューティング
 
 ### Common Issues / よくある問題
@@ -263,7 +267,6 @@ Press `<leader>cm` (default) to toggle the CCManager terminal window.
 
 If the terminal window is too small or too large:
 ターミナルウィンドウが小さすぎる、または大きすぎる場合：
-
 ```lua
 require("ccmanager").setup({
   window = {
@@ -278,6 +281,37 @@ require("ccmanager").setup({
   },
 })
 ```
+
+### Configuration Validation / 設定のバリデーション
+
+CCManager automatically validates your configuration to prevent errors:
+
+CCManagerは設定を自動的に検証してエラーを防ぎます：
+
+#### Validated Settings / 検証される設定
+
+- **window.size**: Must be a number between 0 and 1 / 0から1の間の数値である必要があります
+- **window.position**: Must be one of: `right`, `left`, `float`, `bottom`, `top`, `vertical`, `horizontal`
+- **command**: Must be a non-empty string / 空でない文字列である必要があります
+- **keymap**: Must be a valid keymap string / 有効なキーマップ文字列である必要があります
+- **terminal_keymaps**: Must be a table with string values / 文字列値を持つテーブルである必要があります
+- **wsl_optimization**: Must contain boolean values / ブール値を含む必要があります
+
+#### Example / 例
+
+```lua
+require("ccmanager").setup({
+  window = {
+    size = 2.0,  -- Invalid: will be set to 0.3 (default)
+    position = "center",  -- Invalid: will be set to "right" (default)
+  },
+  command = "",  -- Invalid: will be set to "npx ccmanager" (default)
+})
+```
+
+Invalid settings will be replaced with defaults and you'll see a warning message.
+
+無効な設定はデフォルト値に置き換えられ、警告メッセージが表示されます.
 
 ### WSL2 Paste Issues / WSL2でのペースト問題
 

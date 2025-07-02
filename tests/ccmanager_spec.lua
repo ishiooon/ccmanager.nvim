@@ -26,6 +26,7 @@ describe("ccmanager", function()
     package.loaded["ccmanager.init"] = nil
     package.loaded["ccmanager.terminal"] = nil
     package.loaded["ccmanager.utils"] = nil
+    package.loaded["ccmanager.config"] = nil
     
     ccmanager = require("ccmanager")
   end)
@@ -91,6 +92,53 @@ describe("ccmanager", function()
       
       vim.keymap.set = original_keymap_set
       assert.is_true(keymap_called)
+    end)
+    
+    it("無効な設定が修正される", function()
+      local notify_messages = {}
+      vim.notify = function(msg, level)
+        table.insert(notify_messages, msg)
+      end
+      
+      ccmanager.setup({
+        window = {
+          size = 2.0,  -- 無効: 範囲外
+          position = "invalid",  -- 無効: 無効な位置
+        },
+        command = "",  -- 無効: 空文字列
+      })
+      
+      -- デフォルト値に修正される
+      assert.are.equal(0.3, ccmanager.config.window.size)
+      assert.are.equal("right", ccmanager.config.window.position)
+      assert.are.equal("npx ccmanager", ccmanager.config.command)
+      
+      -- 警告メッセージが表示される
+      assert.is_true(#notify_messages > 0)
+      local found_validation_msg = false
+      for _, msg in ipairs(notify_messages) do
+        if msg:find("Invalid config") or msg:find("replaced with defaults") then
+          found_validation_msg = true
+          break
+        end
+      end
+      assert.is_true(found_validation_msg)
+    end)
+    
+    it("コマンドが登録される", function()
+      local commands = {}
+      local original_create_command = vim.api.nvim_create_user_command
+      vim.api.nvim_create_user_command = function(name, callback, opts)
+        commands[name] = { callback = callback, opts = opts }
+      end
+      
+      ccmanager.setup()
+      
+      vim.api.nvim_create_user_command = original_create_command
+      
+      -- コマンドが登録されている
+      assert.is_not_nil(commands["CCManagerShowConfig"])
+      assert.is_not_nil(commands["CCManagerValidateConfig"])
     end)
   end)
 end)
