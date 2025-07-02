@@ -95,8 +95,10 @@ function M.toggle()
           if M.config.wsl_optimization.fix_paste then
             -- Bracketed Paste Modeを無効化
             vim.cmd("set t_BE=")
-            -- ターミナルバッファでpaste設定を調整
-            vim.bo[term.bufnr].paste = false
+            -- ターミナルモードではpaste設定は使用できないため、代替手段を使用
+            -- vim.api.nvim_set_option_value("paste", false, { scope = "local" })
+            -- 代わりに、ターミナルモード自体の設定を調整
+            vim.api.nvim_buf_set_option(term.bufnr, "modifiable", true)
           end
         end
         

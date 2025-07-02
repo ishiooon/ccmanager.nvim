@@ -401,4 +401,102 @@ describe("ccmanager.terminal", function()
       assert.are.equal(123, keymaps_set[2].opts.buffer)
     end)
   end)
+  
+  describe("WSL2環境での最適化", function()
+    local original_popen
+    
+    before_each(function()
+      -- io.popenのモック（依存関係はOK）
+      original_popen = io.popen
+      io.popen = function(cmd)
+        if cmd:match("which node") then
+          return {
+            read = function() return "/usr/bin/node" end,
+            close = function() end
+          }
+        elseif cmd:match("which ccmanager") or cmd:match("which npx") then
+          return {
+            read = function() return "/usr/bin/npx" end,
+            close = function() end
+          }
+        end
+        return original_popen(cmd)
+      end
+    end)
+    
+    after_each(function()
+      io.popen = original_popen
+    end)
+    
+    it("WSL2環境でペースト修正が適用される", function()
+      -- utilsモジュールのモック
+      package.loaded["ccmanager.utils"] = {
+        is_wsl = function() return true end,
+        check_clipboard_config = function() return true end
+      }
+      
+      -- toggletermモジュールのモック
+      local on_open_function
+      package.loaded["toggleterm"] = {}
+      package.loaded["toggleterm.terminal"] = {
+        Terminal = {
+          new = function(self, opts)
+            on_open_function = opts.on_open
+            return { toggle = function() end }
+          end
+        }
+      }
+      
+      terminal.setup({
+        command = "test",
+        window = { size = 0.3, position = "bottom" },
+        wsl_optimization = {
+          enabled = true,
+          fix_paste = true,
+          check_clipboard = false
+        }
+      })
+      terminal.toggle()
+      
+      -- vim.cmdとvim.api.nvim_buf_set_optionのモック
+      local commands_called = {}
+      local original_cmd = vim.cmd
+      vim.cmd = function(cmd) 
+        table.insert(commands_called, cmd)
+      end
+      
+      local buf_opts_set = {}
+      local original_buf_set_option = vim.api.nvim_buf_set_option
+      vim.api.nvim_buf_set_option = function(bufnr, option, value)
+        table.insert(buf_opts_set, {bufnr = bufnr, option = option, value = value})
+      end
+      
+      -- on_openを実行
+      local term_mock = { bufnr = 123, direction = "horizontal" }
+      on_open_function(term_mock)
+      
+      vim.cmd = original_cmd
+      vim.api.nvim_buf_set_option = original_buf_set_option
+      
+      -- 設定が適用されたか確認
+      local found_tbe = false
+      for _, cmd in ipairs(commands_called) do
+        if cmd == "set t_BE=" then
+          found_tbe = true
+          break
+        end
+      end
+      assert.is_true(found_tbe, "t_BE should be disabled")
+      
+      -- modifiableオプションが設定されたか確認
+      local found_modifiable = false
+      for _, opt in ipairs(buf_opts_set) do
+        if opt.bufnr == 123 and opt.option == "modifiable" and opt.value == true then
+          found_modifiable = true
+          break
+        end
+      end
+      assert.is_true(found_modifiable, "modifiable should be set to true")
+    end)
+  end)
 end)
