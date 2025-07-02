@@ -435,17 +435,23 @@ describe("ccmanager.terminal", function()
         check_clipboard_config = function() return true end
       }
       
-      -- vim.cmdのモック（最初に設定）
-      local commands_called = {}
+      -- on_open関数の実行を確認するためのフラグ
+      local on_open_called = false
+      local t_be_disabled = false
+      local opt_local_set = false
+      
+      -- vim.cmdのモック
       local original_cmd = vim.cmd
       vim.cmd = function(cmd) 
-        if type(cmd) == "string" then
-          table.insert(commands_called, cmd)
+        if type(cmd) == "string" and cmd:match("set t_BE=") then
+          t_be_disabled = true
+        elseif type(cmd) == "string" and cmd:match("startinsert") then
+          -- startinsertも実行されることを確認
+          on_open_called = true
         end
       end
       
       -- vim.opt_localのモック
-      local opt_local_set = false
       local original_opt_local = vim.opt_local
       vim.opt_local = setmetatable({}, {
         __newindex = function(t, k, v)
@@ -465,19 +471,21 @@ describe("ccmanager.terminal", function()
       end
       
       -- toggletermモジュールのモック
-      local on_open_function
       package.loaded["toggleterm"] = {}
       package.loaded["toggleterm.terminal"] = {
         Terminal = {
           new = function(self, opts)
-            on_open_function = opts.on_open
-            -- on_openを即座に実行してテスト
+            -- on_open関数を手動で呼び出して設定を適用
             local term_mock = { bufnr = 123, direction = "horizontal" }
             opts.on_open(term_mock)
             return { toggle = function() end }
           end
         }
       }
+      
+      -- terinalモジュールをリロードして新しいモックを使用
+      package.loaded["ccmanager.terminal"] = nil
+      terminal = require("ccmanager.terminal")
       
       terminal.setup({
         command = "test",
@@ -490,21 +498,14 @@ describe("ccmanager.terminal", function()
       })
       terminal.toggle()
       
+      -- モックを元に戻す
       vim.cmd = original_cmd
       vim.opt_local = original_opt_local
       vim.fn.has = original_has
       
-      -- 設定が適用されたか確認
-      local found_tbe = false
-      for _, cmd in ipairs(commands_called) do
-        if cmd == "set t_BE=" then
-          found_tbe = true
-          break
-        end
-      end
-      assert.is_true(found_tbe, "t_BE should be disabled")
-      
-      -- ttimeoutlenが設定されたか確認
+      -- アサーション
+      assert.is_true(on_open_called, "on_open should be called")
+      assert.is_true(t_be_disabled, "t_BE should be disabled")
       assert.is_true(opt_local_set, "ttimeoutlen should be set to 0")
     end)
   end)
