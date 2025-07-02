@@ -435,34 +435,13 @@ describe("ccmanager.terminal", function()
         check_clipboard_config = function() return true end
       }
       
-      -- toggletermモジュールのモック
-      local on_open_function
-      package.loaded["toggleterm"] = {}
-      package.loaded["toggleterm.terminal"] = {
-        Terminal = {
-          new = function(self, opts)
-            on_open_function = opts.on_open
-            return { toggle = function() end }
-          end
-        }
-      }
-      
-      terminal.setup({
-        command = "test",
-        window = { size = 0.3, position = "bottom" },
-        wsl_optimization = {
-          enabled = true,
-          fix_paste = true,
-          check_clipboard = false
-        }
-      })
-      terminal.toggle()
-      
-      -- vim.cmdのモック
+      -- vim.cmdのモック（最初に設定）
       local commands_called = {}
       local original_cmd = vim.cmd
       vim.cmd = function(cmd) 
-        table.insert(commands_called, cmd)
+        if type(cmd) == "string" then
+          table.insert(commands_called, cmd)
+        end
       end
       
       -- vim.opt_localのモック
@@ -485,9 +464,31 @@ describe("ccmanager.terminal", function()
         return original_has(feature)
       end
       
-      -- on_openを実行
-      local term_mock = { bufnr = 123, direction = "horizontal" }
-      on_open_function(term_mock)
+      -- toggletermモジュールのモック
+      local on_open_function
+      package.loaded["toggleterm"] = {}
+      package.loaded["toggleterm.terminal"] = {
+        Terminal = {
+          new = function(self, opts)
+            on_open_function = opts.on_open
+            -- on_openを即座に実行してテスト
+            local term_mock = { bufnr = 123, direction = "horizontal" }
+            opts.on_open(term_mock)
+            return { toggle = function() end }
+          end
+        }
+      }
+      
+      terminal.setup({
+        command = "test",
+        window = { size = 0.3, position = "bottom" },
+        wsl_optimization = {
+          enabled = true,
+          fix_paste = true,
+          check_clipboard = false
+        }
+      })
+      terminal.toggle()
       
       vim.cmd = original_cmd
       vim.opt_local = original_opt_local
