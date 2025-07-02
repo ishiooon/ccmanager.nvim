@@ -118,32 +118,48 @@ function M.toggle()
         if M.config.terminal_keymaps and M.config.terminal_keymaps.paste then
           -- ターミナルモードでの直接ペースト処理
           vim.keymap.set("t", M.config.terminal_keymaps.paste, function()
-            local clipboard_content = vim.fn.getreg("+")
-            if clipboard_content and clipboard_content ~= "" then
-              -- WSL2環境での大量テキストペースト対策
-              if utils.is_wsl() and #clipboard_content > 100 then
-                -- 大きなテキストは分割してペースト
-                local chunk_size = 50
-                local chunks = {}
-                for i = 1, #clipboard_content, chunk_size do
-                  table.insert(chunks, clipboard_content:sub(i, i + chunk_size - 1))
-                end
-                
-                -- 各チャンクを順番にペースト
-                for i, chunk in ipairs(chunks) do
+            -- ターミナルモードで直接クリップボードからペースト
+            local ok, clipboard_content = pcall(vim.fn.getreg, "+")
+            if not ok or not clipboard_content or clipboard_content == "" then
+              return
+            end
+            
+            -- WSL2環境では特別な処理を適用
+            if utils.is_wsl() then
+              -- vim.fn.systemを使って直接クリップボードから取得（より信頼性が高い）
+              local powershell_cmd = 'powershell.exe -NoProfile -Command "[Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace(\\"`r\\", \\"\\"))"'
+              local ok_sys, content = pcall(vim.fn.system, powershell_cmd)
+              if ok_sys and content and content ~= "" then
+                clipboard_content = content
+              end
+              
+              -- 改行とキャリッジリターンを正規化
+              clipboard_content = clipboard_content:gsub("\r\n", "\n"):gsub("\r", "\n")
+              
+              -- 大量テキストの場合は分割処理
+              if #clipboard_content > 100 then
+                -- より小さなチャンクサイズで安定性を向上
+                local chunk_size = 30
+                local pos = 1
+                while pos <= #clipboard_content do
+                  local chunk = clipboard_content:sub(pos, pos + chunk_size - 1)
+                  -- 特殊文字を適切にエスケープ
                   local escaped = vim.api.nvim_replace_termcodes(chunk, true, false, true)
-                  vim.api.nvim_feedkeys(escaped, "n", false)
-                  -- 小さな遅延を入れて処理を安定化
-                  if i < #chunks then
-                    vim.cmd("sleep 1m")
+                  vim.api.nvim_feedkeys(escaped, "nt", false)
+                  pos = pos + chunk_size
+                  -- 各チャンク間で短い待機
+                  if pos <= #clipboard_content then
+                    vim.cmd("redraw")
+                    vim.cmd("sleep 2m")
                   end
                 end
-              else
-                -- 通常のペースト処理
-                local escaped = vim.api.nvim_replace_termcodes(clipboard_content, true, false, true)
-                vim.api.nvim_feedkeys(escaped, "n", false)
+                return
               end
             end
+            
+            -- 通常のペースト処理
+            local escaped = vim.api.nvim_replace_termcodes(clipboard_content, true, false, true)
+            vim.api.nvim_feedkeys(escaped, "nt", false)
           end, { buffer = term.bufnr, desc = "Paste from clipboard" })
         end
       end,
